@@ -1,0 +1,6 @@
+# API keys - never commit to repository
+大模型api.md
+
+# OS files
+.DS_Store
+Thumbs.db

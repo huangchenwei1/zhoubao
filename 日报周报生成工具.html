@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 周报</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Variables ── */
+    :root {
+      --bg:        #F2EDE4;
+      --surface:   #FDFAF5;
+      --border:    #DDD5C8;
+      --ink:       #1C1714;
+      --ink-2:     #6B5F53;
+      --ink-3:     #A8998A;
+      --accent:    #C85D3A;
+      --accent-bg: #FDF0EB;
+      --done:      #B0A396;
+      --green:     #3A7A5A;
+      --radius:    10px;
+      --shadow:    0 1px 6px rgba(28,23,20,.06), 0 4px 16px rgba(28,23,20,.04);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ── Full-width topbar ── */
+    .topbar-outer {
+      width: 100%;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .app-name {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -.4px;
+    }
+    .brand-sep {
+      width: 1px;
+      height: 16px;
+      background: var(--border);
+    }
+    .app-desc {
+      font-size: 13px;
+      color: var(--ink-3);
+    }
+    .app-today {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .today-day {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1;
+    }
+    .today-meta {
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.55;
+    }
+
+    /* ── Layout ── */
+    .app {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 28px 48px 60px;
+    }
+
+    /* ── Horizontal week strip (top) ── */
+    .week-strip-wrap {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .week-strip-inner {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .ws-item {
+      text-align: center;
+      padding: 6px 4px 5px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: all .15s;
+    }
+    .ws-item:hover { background: var(--border); }
+    .ws-item.is-today { border-color: var(--border); }
+    .ws-item.is-viewing { background: #fff; border-color: var(--border); }
+    .ws-name { font-size: 10px; color: var(--ink-3); display: block; }
+    .ws-item.is-viewing .ws-name { color: var(--ink-2); }
+    .ws-num { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4; display: block; }
+    .ws-item.is-viewing .ws-num { color: var(--ink); }
+    .ws-cnt {
+      display: inline-block;
+      margin-top: 2px;
+      font-size: 10px;
+      color: var(--ink-3);
+    }
+    .ws-item.has-tasks .ws-cnt { color: var(--accent); font-weight: 500; }
+    .ws-item.is-viewing .ws-cnt { color: var(--ink-2); }
+    .ws-item.is-viewing.has-tasks .ws-cnt { color: var(--accent); font-weight: 500; }
+
+    /* ── Two-column body ── */
+    .app-body {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 0;
+      align-items: start;
+    }
+
+    /* ── Left column: tasks ── */
+    .col-left {
+      padding-right: 52px;
+      position: sticky;
+      top: 28px;
+    }
+
+    /* ── Right column: reports ── */
+    .col-right {
+      padding-left: 52px;
+      border-left: 1px solid var(--border);
+    }
+
+    /* ── Section label (replaces card-label) ── */
+    .sec-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 16px;
+    }
+    .sec-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    /* keep .card-label for task area compat */
+    .card-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    /* ── Report sections ── */
+    .report-section {
+      padding-bottom: 36px;
+    }
+    .report-section + .report-section {
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+    .rs-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .rs-info { flex: 1; }
+    .rs-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+    .rs-meta {
+      font-size: 13px;
+      color: var(--ink-3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .rs-meta .week-nav-btn {
+      background: none;
+      border: none;
+      color: var(--ink-3);
+      font-size: 15px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+      transition: color .15s;
+    }
+    .rs-meta .week-nav-btn:hover { color: var(--ink); }
+    .rs-meta .week-nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+    .rs-gen-btn {
+      flex-shrink: 0;
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+      white-space: nowrap;
+    }
+    .rs-gen-btn:hover { background: #b05130; }
+    .rs-gen-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .rs-output {
+      border-left: 2px solid var(--border);
+      padding-left: 18px;
+      min-height: 80px;
+    }
+    .rs-output .report-box { border: none; background: none; padding: 0; margin-top: 0; border-radius: 0; }
+    .rs-output .error-box { margin-top: 0; }
+    .rs-output .report-footer { margin-top: 12px; }
+
+    /* placeholder lines */
+    .rs-placeholder {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 4px 0 6px;
+    }
+    .rs-placeholder-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .rs-placeholder-line .pl-num {
+      font-size: 13px;
+      color: #D4CBBf;
+      font-weight: 500;
+      width: 16px;
+      flex-shrink: 0;
+    }
+    .rs-placeholder-line .pl-bar {
+      height: 1.5px;
+      border-radius: 2px;
+      background: #E0D8CF;
+    }
+
+    /* ── Date nav ── */
+    .date-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .nav-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 11px;
+      font-size: 13px;
+      font-family: 'Noto Sans SC', sans-serif;
+      color: var(--ink-2);
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .nav-btn:hover { background: var(--bg); border-color: var(--ink-3); }
+    .nav-btn.accent-btn {
+      color: var(--accent);
+      border-color: currentColor;
+      font-size: 12px;
+    }
+    .nav-btn.accent-btn:hover { background: var(--accent-bg); }
+    .nav-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .nav-center {
+      flex: 1;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    /* ── Add task ── */
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .task-input {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-size: 14px;
+      font-family: 'Noto Sans SC', sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      outline: none;
+      transition: border-color .15s, background .15s;
+    }
+    .task-input::placeholder { color: var(--ink-3); }
+    .task-input:focus { border-color: var(--accent); background: #fff; }
+    .add-btn {
+      width: 42px;
+      height: 42px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, transform .1s;
+    }
+    .add-btn:hover { background: #b05130; }
+    .add-btn:active { transform: scale(.92); }
+
+    /* ── Task list ── */
+    .task-list { list-style: none; }
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      animation: slideIn .18s ease;
+    }
+    .task-item:last-child { border-bottom: none; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .task-check {
+      position: relative;
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .task-check input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 0; height: 0;
+    }
+    .check-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border: 1.5px solid var(--border);
+      border-radius: 5px;
+      background: #fff;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .task-check input:checked ~ .check-box {
+      background: var(--green);
+      border-color: var(--green);
+    }
+    .check-box svg { opacity: 0; transform: scale(.5); transition: all .15s; }
+    .task-check input:checked ~ .check-box svg { opacity: 1; transform: scale(1); }
+    .check-box:hover { border-color: var(--ink-3); }
+
+    .task-text {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--ink);
+      transition: color .15s;
+    }
+    .task-text.done { text-decoration: line-through; color: var(--done); }
+
+    .del-btn {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--ink-3);
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      transition: all .15s;
+    }
+    .task-item:hover .del-btn { opacity: 1; }
+    .del-btn:hover { color: var(--accent); background: var(--accent-bg); }
+
+    /* task inline edit */
+    .task-edit-input {
+      flex: 1;
+      border: none;
+      border-bottom: 1.5px solid var(--accent);
+      background: transparent;
+      font-size: 14px;
+      font-family: 'Noto Sans SC', sans-serif;
+      color: var(--ink);
+      outline: none;
+      padding: 1px 0 3px;
+    }
+    .task-text { cursor: text; }
+
+    /* report editable */
+    .report-box[contenteditable="true"] {
+      outline: none;
+      cursor: text;
+      caret-color: var(--accent);
+    }
+    .report-box[contenteditable="true"]:focus {
+      border-left-color: var(--accent);
+    }
+    .edit-hint {
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .empty-tip {
+      text-align: center;
+      padding: 32px 0 10px;
+      color: var(--ink-3);
+      font-size: 13px;
+    }
+    .empty-tip em { display: block; font-size: 26px; font-style: normal; margin-bottom: 8px; }
+
+    .stats-row {
+      display: flex;
+      gap: 14px;
+      padding: 12px 0 0;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .stat { font-size: 12px; color: var(--ink-3); }
+    .stat b { color: var(--ink); font-weight: 500; }
+    .stat .hi { color: var(--accent); font-weight: 500; }
+
+    /* Week picker */
+    .week-picker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .wk-label {
+      flex: 1;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+
+    .gen-btn {
+      width: 100%;
+      padding: 11px 0;
+      border: none;
+      border-radius: 7px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, opacity .15s;
+    }
+    .gen-btn:hover { background: #b05130; }
+    .gen-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* ── Report output ── */
+    .report-output-wrap { margin-top: 16px; }
+    .report-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      font-size: 14px;
+      line-height: 1.9;
+      white-space: pre-wrap;
+      color: var(--ink);
+      display: none;
+      animation: fadeUp .22s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .report-box.loading { color: var(--ink-3); font-style: italic; }
+    .report-footer {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .copy-btn {
+      padding: 7px 16px;
+      border: 1.5px solid var(--green);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--green);
+      font-size: 13px;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .copy-btn:hover { background: var(--green); color: #fff; }
+    .error-box {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #B91C1C;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    /* ── Feedback button ── */
+    .feedback-btn {
+      position: fixed;
+      right: 28px;
+      bottom: 28px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: box-shadow .15s, transform .15s;
+      z-index: 100;
+      color: var(--ink-3);
+      font-size: 18px;
+    }
+    .feedback-btn:hover {
+      box-shadow: none;
+      transform: translateY(-2px);
+      color: var(--ink);
+    }
+
+    /* QR popup */
+    .qr-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+    }
+    .qr-overlay.open { display: block; }
+    .qr-popup {
+      position: fixed;
+      right: 80px;
+      bottom: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(28,23,20,.14);
+      padding: 20px;
+      text-align: center;
+      animation: popUp .18s ease;
+    }
+    @keyframes popUp {
+      from { opacity: 0; transform: scale(.92) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .qr-popup img {
+      width: 160px;
+      height: 160px;
+      display: block;
+      border-radius: 6px;
+    }
+    .qr-popup p {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--ink-3);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Full-width top bar -->
+<div class="topbar-outer">
+  <div class="topbar-inner">
+    <div class="app-brand">
+      <span class="app-name">AI 周报</span>
+      <div class="brand-sep"></div>
+      <span class="app-desc">记录每日任务，一键生成工作总结</span>
+    </div>
+    <div class="app-today">
+      <video src="./Relax.webm" autoplay loop muted playsinline style="height:56px;width:auto;display:block;"></video>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="today-day" id="headerDay"></div>
+        <div class="today-meta" id="headerMeta"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- 横向本周导航 -->
+  <div class="week-strip-wrap">
+    <div class="week-strip-inner" id="weekSidebar"></div>
+  </div>
+
+  <div class="app-body">
+
+    <!-- ── 左列：任务管理 ── -->
+    <div class="col-left">
+      <div class="card-header">
+        <span class="card-label">今日待办</span>
+        <div id="statsRow" style="display:none">
+          <span class="stat" style="font-size:12px">
+            共 <b id="statTotal">0</b> 项 &nbsp;·&nbsp;
+            已完成 <span class="hi" id="statDone">0</span> 项 &nbsp;·&nbsp;
+            待处理 <b id="statUndone">0</b> 项
+          </span>
+        </div>
+      </div>
+
+      <div class="add-row">
+        <input class="task-input" type="text" id="taskInput"
+               placeholder="添加待办事项，按回车确认…"
+               onkeydown="if(event.key==='Enter') addTask()" />
+        <button class="add-btn" onclick="addTask()">+</button>
+      </div>
+
+      <ul class="task-list" id="taskList"></ul>
+      <div class="empty-tip" id="emptyTip" style="display:none">
+        <em>📋</em>今天还没有任务，添加一个吧
+      </div>
+    </div>
+
+    <!-- ── 中列：日报 + 周报 各独立区块 ── -->
+    <div class="col-right">
+
+      <!-- 日报区块 -->
+      <div class="report-section">
+        <div class="rs-top">
+          <div class="rs-info">
+            <div class="rs-title">日报</div>
+            <div class="rs-meta" id="dailyReportMeta"></div>
+          </div>
+          <button class="rs-gen-btn" id="dailyGenBtn" onclick="generateReport('daily')">生成日报</button>
+        </div>
+        <div class="rs-output">
+          <div class="rs-placeholder" id="placeholderDaily">
+            <div class="rs-placeholder-line"><span class="pl-num">1.</span></div>
+            <div class="rs-placeholder-line"><span class="pl-num">2.</span></div>
+            <div class="rs-placeholder-line"><span class="pl-num">3.</span></div>
+            <div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div>
+          </div>
+          <div id="reportOutputDaily" class="report-box"></div>
+          <div id="reportErrorDaily" class="error-box"></div>
+          <div class="report-footer" id="reportFooterDaily">
+            <span class="edit-hint">点击内容可直接编辑</span>
+            <button class="copy-btn" onclick="copyReport('daily')">一键复制</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 周报区块 -->
+      <div class="report-section">
+        <div class="rs-top">
+          <div class="rs-info">
+            <div class="rs-title">周报</div>
+            <div class="rs-meta">
+              <button class="week-nav-btn" onclick="changeReportWeek(-1)">&#8249;</button>
+              <span id="reportWeekLabel"></span>
+              <button class="week-nav-btn" id="reportWeekNextBtn" onclick="changeReportWeek(1)">&#8250;</button>
+            </div>
+          </div>
+          <button class="rs-gen-btn" id="weeklyGenBtn" onclick="generateReport('weekly')">生成周报</button>
+        </div>
+        <div class="rs-output">
+          <div class="rs-placeholder" id="placeholderWeekly">
+            <div class="rs-placeholder-line"><span class="pl-num">1.</span></div>
+            <div class="rs-placeholder-line"><span class="pl-num">2.</span></div>
+            <div class="rs-placeholder-line"><span class="pl-num">3.</span></div>
+            <div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div>
+          </div>
+          <div id="reportOutputWeekly" class="report-box"></div>
+          <div id="reportErrorWeekly" class="error-box"></div>
+          <div class="report-footer" id="reportFooterWeekly">
+            <span class="edit-hint">点击内容可直接编辑</span>
+            <button class="copy-btn" onclick="copyReport('weekly')">一键复制</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Feedback button -->
+<button class="feedback-btn" onclick="toggleQR(event)" title="问题反馈">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+</button>
+
+<!-- QR overlay -->
+<div class="qr-overlay" id="qrOverlay" onclick="closeQR()">
+  <div class="qr-popup" onclick="event.stopPropagation()">
+    <img src="./二维码.png" alt="反馈二维码" />
+    <p>扫码联系，反馈问题</p>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const STORAGE_KEY  = 'report_tool_tasks';
+const SETTINGS_KEY = 'report_tool_settings';
+
+const DEFAULT_SETTINGS = {
+  apiKey:      '',  // Set your API key in settings or copy from 大模型api.example.md
+  apiEndpoint: 'https://api.openai.com/v1',
+  apiModel:    'gpt-4o',
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let currentDate      = todayStr();
+let reportWeekOffset = 0;
+let editingTaskId    = null;
+let tasks            = loadTasks();
+let settings         = loadSettings();
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function parseDateStr(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatDateShort(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return `${m}月${d}日`;
+}
+
+function formatDateFull(str) {
+  const [y, m, d] = str.split('-');
+  const days = ['周日','周一','周二','周三','周四','周五','周六'];
+  return `${y}年${m}月${d}日 ${days[parseDateStr(str).getDay()]}`;
+}
+
+function getWeekDates(dateStr) {
+  const date = parseDateStr(dateStr);
+  const dow  = date.getDay();
+  const mon  = new Date(date);
+  mon.setDate(date.getDate() - (dow === 0 ? 6 : dow - 1));
+  return Array.from({length: 7}, (_, i) => {
+    const t = new Date(mon);
+    t.setDate(mon.getDate() + i);
+    return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+  });
+}
+
+function getReportWeekDates() {
+  const base = new Date();
+  base.setDate(base.getDate() + reportWeekOffset * 7);
+  const str = `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}`;
+  return getWeekDates(str);
+}
+
+// ── Storage ────────────────────────────────────────────────────────────────
+function loadTasks() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveTasks() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    return Object.assign({}, DEFAULT_SETTINGS, s);
+  } catch { return Object.assign({}, DEFAULT_SETTINGS); }
+}
+
+// ── Task CRUD ──────────────────────────────────────────────────────────────
+function addTask() {
+  const input = document.getElementById('taskInput');
+  const text  = input.value.trim();
+  if (!text) return;
+  if (!tasks[currentDate]) tasks[currentDate] = [];
+  tasks[currentDate].push({ id: Date.now(), text, done: false, createdAt: new Date().toISOString() });
+  saveTasks();
+  input.value = '';
+  renderAll();
+}
+
+function toggleTask(date, id) {
+  const t = (tasks[date] || []).find(t => t.id === id);
+  if (t) { t.done = !t.done; saveTasks(); }
+  renderAll();
+}
+
+function deleteTask(date, id) {
+  if (!tasks[date]) return;
+  tasks[date] = tasks[date].filter(t => t.id !== id);
+  saveTasks();
+  renderAll();
+}
+
+function startTaskEdit(id) {
+  editingTaskId = id;
+  renderTaskList();
+}
+
+function saveTaskEdit(date, id, newText) {
+  const text = newText.trim();
+  if (text) {
+    const t = (tasks[date] || []).find(t => t.id === id);
+    if (t) { t.text = text; saveTasks(); }
+  }
+  editingTaskId = null;
+  renderAll();
+}
+
+function cancelTaskEdit() {
+  editingTaskId = null;
+  renderTaskList();
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderTopbar();
+  renderTaskList();
+  renderWeekSidebar();
+  renderReportWeekLabel();
+}
+
+function renderTopbar() {
+  const today = new Date();
+  const days  = ['周日','周一','周二','周三','周四','周五','周六'];
+  document.getElementById('headerDay').textContent  = pad(today.getDate());
+  document.getElementById('headerMeta').innerHTML   =
+    `${today.getFullYear()}年${pad(today.getMonth()+1)}月<br>${days[today.getDay()]}`;
+}
+
+function renderTaskList() {
+  const list     = document.getElementById('taskList');
+  const empty    = document.getElementById('emptyTip');
+  const statsRow = document.getElementById('statsRow');
+  const dayTasks = tasks[currentDate] || [];
+
+  document.getElementById('dailyReportMeta').textContent  = `当前日期：${formatDateShort(currentDate)}`;
+
+  if (!dayTasks.length) {
+    list.innerHTML         = '';
+    empty.style.display    = 'block';
+    statsRow.style.display = 'none';
+    return;
+  }
+
+  empty.style.display    = 'none';
+  statsRow.style.display = 'block';
+
+  const doneCount = dayTasks.filter(t => t.done).length;
+  document.getElementById('statTotal').textContent  = dayTasks.length;
+  document.getElementById('statDone').textContent   = doneCount;
+  document.getElementById('statUndone').textContent = dayTasks.length - doneCount;
+
+  list.innerHTML = dayTasks.map(t => {
+    const isEditing = t.id === editingTaskId;
+    const textPart = isEditing
+      ? `<input class="task-edit-input" value="${escHtml(t.text)}"
+               onblur="saveTaskEdit('${currentDate}', ${t.id}, this.value)"
+               onkeydown="if(event.key==='Enter'){this.blur()} if(event.key==='Escape'){cancelTaskEdit()}"
+         />`
+      : `<span class="task-text ${t.done ? 'done' : ''}"
+               onclick="startTaskEdit(${t.id})">${escHtml(t.text)}</span>`;
+    return `
+    <li class="task-item">
+      <label class="task-check">
+        <input type="checkbox" ${t.done ? 'checked' : ''}
+               onchange="toggleTask('${currentDate}', ${t.id})" />
+        <div class="check-box">
+          <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+            <path d="M1 3.5L4 6.5L10 1" stroke="white" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </label>
+      ${textPart}
+      <button class="del-btn" onclick="deleteTask('${currentDate}', ${t.id})" title="删除">×</button>
+    </li>`;
+  }).join('');
+
+  if (editingTaskId !== null) {
+    const inp = document.querySelector('.task-edit-input');
+    if (inp) { inp.focus(); inp.select(); }
+  }
+}
+
+function renderWeekSidebar() {
+  const weekDates = getWeekDates(todayStr());
+  const today     = todayStr();
+  const labels    = ['一','二','三','四','五','六','日'];
+  document.getElementById('weekSidebar').innerHTML = weekDates.map((date, i) => {
+    const count = (tasks[date] || []).length;
+    let cls = 'ws-item';
+    if (date === currentDate) cls += ' is-viewing';
+    else if (date === today)  cls += ' is-today';
+    if (count > 0) cls += ' has-tasks';
+    return `<div class="${cls}" onclick="jumpToDate('${date}')">
+      <div class="ws-name">周${labels[i]}</div>
+      <div class="ws-num">${+date.slice(8)}</div>
+      <div class="ws-cnt">${count > 0 ? count + '项' : '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderReportWeekLabel() {
+  const dates = getReportWeekDates();
+  const start = dates[0], end = dates[6];
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  const thisYear = new Date().getFullYear();
+  let label;
+  if (sy === ey && sy === thisYear) {
+    label = `${sm}月${sd}日 — ${em}月${ed}日`;
+  } else if (sy === ey) {
+    label = `${sy}年 ${sm}月${sd}日 — ${em}月${ed}日`;
+  } else {
+    label = `${sy}年${sm}月${sd}日 — ${ey}年${em}月${ed}日`;
+  }
+  document.getElementById('reportWeekLabel').textContent = label;
+  // disable "下一周" if already at current week
+  document.getElementById('reportWeekNextBtn').disabled = reportWeekOffset >= 0;
+}
+
+// ── Date Navigation ────────────────────────────────────────────────────────
+function changeDate(delta) {
+  const d = parseDateStr(currentDate);
+  d.setDate(d.getDate() + delta);
+  currentDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  renderAll();
+}
+
+function jumpToToday() {
+  currentDate = todayStr();
+  renderAll();
+}
+
+function jumpToDate(date) {
+  currentDate = date;
+  renderAll();
+}
+
+function changeReportWeek(delta) {
+  reportWeekOffset = Math.min(0, reportWeekOffset + delta);
+  renderReportWeekLabel();
+}
+
+// ── Report Generation ──────────────────────────────────────────────────────
+async function generateReport(type) {
+  const suffix      = type === 'daily' ? 'Daily' : 'Weekly';
+  const outputEl    = document.getElementById(`reportOutput${suffix}`);
+  const errorEl     = document.getElementById(`reportError${suffix}`);
+  const footerEl    = document.getElementById(`reportFooter${suffix}`);
+  const placeholder = document.getElementById(`placeholder${suffix}`);
+  const dailyBtn    = document.getElementById('dailyGenBtn');
+  const weekBtn     = document.getElementById('weeklyGenBtn');
+
+  placeholder.style.display = 'none';
+  errorEl.style.display     = 'none';
+  footerEl.style.display    = 'none';
+  outputEl.style.display    = 'block';
+  outputEl.className        = 'report-box loading';
+  outputEl.textContent      = '正在生成，请稍候…';
+  dailyBtn.disabled = weekBtn.disabled = true;
+
+  const taskData = type === 'daily' ? buildDailyData() : buildWeeklyData();
+  const prompt   = type === 'daily' ? buildDailyPrompt(taskData) : buildWeeklyPrompt(taskData);
+
+  try {
+    const text                     = await callLLM(prompt);
+    outputEl.className             = 'report-box';
+    outputEl.textContent           = text;
+    outputEl.contentEditable       = 'true';
+    outputEl.spellcheck            = false;
+    footerEl.style.display         = 'flex';
+  } catch (err) {
+    outputEl.style.display = 'none';
+    errorEl.style.display  = 'block';
+    errorEl.textContent    = `生成失败：${err.message}`;
+  } finally {
+    dailyBtn.disabled = weekBtn.disabled = false;
+  }
+}
+
+function buildDailyData() {
+  const day = tasks[currentDate] || [];
+  return {
+    date:   currentDate,
+    done:   day.filter(t =>  t.done).map(t => t.text),
+    undone: day.filter(t => !t.done).map(t => t.text),
+  };
+}
+
+function buildWeeklyData() {
+  const dates    = getReportWeekDates();
+  const allTasks = dates.flatMap(date => (tasks[date] || []).map(t => ({ ...t, date })));
+  return {
+    weekStart: dates[0],
+    weekEnd:   dates[6],
+    done:      allTasks.filter(t =>  t.done).map(t => `[${t.date}] ${t.text}`),
+    undone:    allTasks.filter(t => !t.done).map(t => `[${t.date}] ${t.text}`),
+  };
+}
+
+function buildDailyPrompt({ date, done, undone }) {
+  return `You are a professional workplace assistant. Generate a concise daily work report in Chinese.
+
+Date: ${date}
+Completed tasks:
+${done.length ? done.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
+Incomplete tasks:
+${undone.length ? undone.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
+
+Output format (Chinese only, no extra explanation):
+【今日完成】
+（列出已完成事项）
+
+【未完成事项】
+（列出未完成事项，如无则写"无"）
+
+【明日计划】
+（根据未完成事项给出明天的具体计划）`;
+}
+
+function buildWeeklyPrompt({ weekStart, weekEnd, done, undone }) {
+  return `You are a professional workplace assistant. Generate a concise weekly work report in Chinese.
+
+Week: ${weekStart} to ${weekEnd}
+Completed tasks:
+${done.length ? done.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
+Incomplete tasks:
+${undone.length ? undone.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
+
+Output format (Chinese only, no extra explanation):
+【本周完成】
+（按主题归纳本周完成的工作）
+
+【下周计划】
+（根据未完成事项制定下周合理计划）`;
+}
+
+async function callLLM(prompt) {
+  const { apiKey: key, apiEndpoint: endpoint, apiModel: model } = settings;
+  if (!key) throw new Error('未配置 API Key。');
+
+  const resp = await fetch(`${endpoint.replace(/\/$/, '')}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`请求失败 (${resp.status})：${body}`);
+  }
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.content || '未返回内容。';
+}
+
+// ── Copy ───────────────────────────────────────────────────────────────────
+function copyReport(type) {
+  const suffix = type === 'daily' ? 'Daily' : 'Weekly';
+  const el     = document.getElementById(`reportOutput${suffix}`);
+  const btn    = document.querySelector(`#reportFooter${suffix} .copy-btn`);
+  const text   = el.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '已复制 ✓';
+    setTimeout(() => btn.textContent = '一键复制', 2000);
+  }).catch(() => {
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(r);
+    document.execCommand('copy');
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Feedback QR ────────────────────────────────────────────────────────────
+function toggleQR(e) {
+  e.stopPropagation();
+  const overlay = document.getElementById('qrOverlay');
+  overlay.classList.toggle('open');
+}
+
+function closeQR() {
+  document.getElementById('qrOverlay').classList.remove('open');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
