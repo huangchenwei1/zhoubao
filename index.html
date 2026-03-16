@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="帮你解决回忆每周工作项的难题，管理待办和写周报一站式解决" />
   <title>AI周报与待办-轻松完成日程，轻松整理日报/周报</title>
   <link rel="icon" href="favicon.png" type="image/png" />
@@ -619,12 +619,216 @@
       font-size: 12px;
       color: var(--ink-3);
     }
+
+    /* ── Splash page ── */
+    @keyframes splash-fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes splash-bg-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .splash-page {
+      position: fixed;
+      inset: 0;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      animation: splash-bg-in 0.9s ease;
+    }
+    .splash-page.is-hidden {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+    .splash-content {
+      text-align: center;
+      padding: 24px;
+    }
+    .splash-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 34px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.4;
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: splash-fade-up 0.9s ease 0.4s forwards;
+    }
+    .splash-subtitle {
+      font-size: 20px;
+      color: var(--ink-2);
+      line-height: 1.7;
+      margin-bottom: 40px;
+      white-space: nowrap;
+      opacity: 0;
+      animation: splash-fade-up 0.9s ease 0.9s forwards;
+    }
+    .splash-btn {
+      display: inline-block;
+      padding: 14px 32px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      opacity: 0;
+      animation: splash-fade-up 0.9s ease 1.4s forwards;
+    }
+    .splash-btn:hover {
+      background: #b05130;
+      transform: translateY(-1px);
+    }
+
+    /* ── Main page entrance animation ── */
+    @keyframes page-fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .page-entrance {
+      opacity: 0;
+    }
+    body.page-ready .page-entrance {
+      animation: page-fade-up 0.8s ease forwards;
+    }
+    body.page-ready .page-entrance-1 { animation-delay: 0.1s; }
+    body.page-ready .page-entrance-2 { animation-delay: 0.25s; }
+    body.page-ready .page-entrance-3 { animation-delay: 0.4s; }
+    body.page-ready .page-entrance-4 { animation-delay: 0.55s; }
+    body.page-ready .page-entrance-5 { animation-delay: 0.7s; }
+    body.page-ready .page-entrance-6 { animation-delay: 0.85s; }
+
+    /* ── Mobile responsive ── */
+    @media (max-width: 768px) {
+      .topbar-inner {
+        padding: max(0px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+        height: auto;
+        min-height: 56px;
+      }
+      .app-name { font-size: 18px; }
+      .app-desc { font-size: 12px; display: none; }
+      .brand-sep { display: none; }
+      .app-today video { height: 40px !important; }
+      .today-day { font-size: 20px; }
+      .today-meta { font-size: 12px; }
+
+      .app {
+        padding: 16px 16px 40px;
+      }
+
+      .week-strip-inner {
+        gap: 2px;
+      }
+      .ws-item { padding: 4px 2px 3px; }
+      .ws-name { font-size: 9px; }
+      .ws-num { font-size: 12px; }
+      .ws-cnt { font-size: 9px; }
+
+      .app-body {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+      .col-left {
+        padding-right: 0;
+        position: static;
+      }
+      .col-right {
+        padding-left: 0;
+        border-left: none;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+      }
+
+      .report-section {
+        padding-bottom: 24px;
+      }
+      .report-section + .report-section {
+        padding-top: 24px;
+      }
+      .rs-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .rs-gen-btn { align-self: flex-start; }
+      .rs-output {
+        padding-left: 12px;
+        border-left-width: 2px;
+      }
+      .rs-title { font-size: 16px; }
+
+      .splash-content { padding: 20px 16px; }
+      .splash-title { font-size: 24px; }
+      .splash-subtitle {
+        font-size: 16px;
+        white-space: normal;
+        text-align: center;
+      }
+      .splash-btn { padding: 12px 24px; font-size: 15px; }
+
+      .feedback-btn {
+        right: max(16px, env(safe-area-inset-right));
+        bottom: max(16px, env(safe-area-inset-bottom));
+        width: 40px;
+        height: 40px;
+      }
+      .qr-popup {
+        left: 16px;
+        right: 16px;
+        bottom: 24px;
+        margin: 0 auto;
+        width: fit-content;
+        max-width: 200px;
+      }
+      .qr-popup img { width: 140px; height: 140px; }
+    }
+
+    @media (max-width: 480px) {
+      .topbar-inner { padding: 0 12px; }
+      .app-today { gap: 12px; }
+      .app-today video { height: 36px !important; }
+      .today-day { font-size: 18px; }
+
+      .app { padding: 12px 12px 32px; }
+
+      .splash-title { font-size: 20px; }
+      .splash-subtitle { font-size: 14px; }
+    }
   </style>
 </head>
 <body>
 
+<!-- Splash page -->
+<div class="splash-page" id="splashOverlay">
+  <div class="splash-content">
+    <div class="splash-title">🤔 还在为写周报头疼吗?</div>
+    <div class="splash-subtitle">正确的工作方式会使你更游刃有余，管理就从日常开始~</div>
+    <button class="splash-btn" id="splashBtn">告别迷乱，开启新篇章</button>
+  </div>
+</div>
+
 <!-- Full-width top bar -->
-<div class="topbar-outer">
+<div class="topbar-outer page-entrance page-entrance-1">
   <div class="topbar-inner">
     <div class="app-brand">
       <span class="app-name">AI 周报</span>
@@ -644,14 +848,14 @@
 <div class="app">
 
   <!-- 横向本周导航 -->
-  <div class="week-strip-wrap">
+  <div class="week-strip-wrap page-entrance page-entrance-2">
     <div class="week-strip-inner" id="weekSidebar"></div>
   </div>
 
   <div class="app-body">
 
     <!-- ── 左列：任务管理 ── -->
-    <div class="col-left">
+    <div class="col-left page-entrance page-entrance-3">
       <div class="card-header">
         <span class="card-label">今日待办</span>
         <div id="statsRow" style="display:none">
@@ -680,7 +884,7 @@
     <div class="col-right">
 
       <!-- 日报区块 -->
-      <div class="report-section">
+      <div class="report-section page-entrance page-entrance-4">
         <div class="rs-top">
           <div class="rs-info">
             <div class="rs-title">日报</div>
@@ -705,7 +909,7 @@
       </div>
 
       <!-- 周报区块 -->
-      <div class="report-section">
+      <div class="report-section page-entrance page-entrance-5">
         <div class="rs-top">
           <div class="rs-info">
             <div class="rs-title">周报</div>
@@ -739,7 +943,7 @@
 </div>
 
 <!-- Feedback button -->
-<button class="feedback-btn" onclick="toggleQR(event)" title="问题反馈">
+<button class="feedback-btn page-entrance page-entrance-6" onclick="toggleQR(event)" title="问题反馈">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
   </svg>
@@ -754,6 +958,17 @@
 </div>
 
 <script>
+// ── Splash page ─────────────────────────────────────────────────────────────
+(function() {
+  const splashPage = document.getElementById('splashOverlay');
+  const btn = document.getElementById('splashBtn');
+  btn.onclick = function() {
+    document.body.classList.add('page-ready');
+    splashPage.classList.add('is-hidden');
+    setTimeout(function() { splashPage.style.display = 'none'; }, 350);
+  };
+})();
+
 // ── Constants ──────────────────────────────────────────────────────────────
 const STORAGE_KEY  = 'report_tool_tasks';
 const SETTINGS_KEY = 'report_tool_settings';
