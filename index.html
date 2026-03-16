@@ -620,7 +620,7 @@
       color: var(--ink-3);
     }
 
-    /* ── Splash page ── */
+    /* ── Splash page (first visit only) ── */
     @keyframes splash-fade-up {
       from {
         opacity: 0;
@@ -818,7 +818,7 @@
 </head>
 <body>
 
-<!-- Splash page -->
+<!-- Splash page (first visit only) -->
 <div class="splash-page" id="splashOverlay">
   <div class="splash-content">
     <div class="splash-title">🤔 还在为写周报头疼吗?</div>
@@ -958,15 +958,22 @@
 </div>
 
 <script>
-// ── Splash page ─────────────────────────────────────────────────────────────
+// ── Splash page (first visit only) ───────────────────────────────────────────
 (function() {
+  const SPLASH_KEY = 'report_tool_splash_seen';
   const splashPage = document.getElementById('splashOverlay');
   const btn = document.getElementById('splashBtn');
-  btn.onclick = function() {
+  if (localStorage.getItem(SPLASH_KEY)) {
+    splashPage.style.display = 'none';
     document.body.classList.add('page-ready');
-    splashPage.classList.add('is-hidden');
-    setTimeout(function() { splashPage.style.display = 'none'; }, 350);
-  };
+  } else {
+    btn.onclick = function() {
+      localStorage.setItem(SPLASH_KEY, '1');
+      document.body.classList.add('page-ready');
+      splashPage.classList.add('is-hidden');
+      setTimeout(function() { splashPage.style.display = 'none'; }, 350);
+    };
+  }
 })();
 
 // ── Constants ──────────────────────────────────────────────────────────────
