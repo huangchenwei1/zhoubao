@@ -1338,15 +1338,33 @@ Output format (Chinese only, no extra explanation):
 }
 
 async function callLLM(prompt) {
-  const { apiKey: key, apiEndpoint: endpoint, apiModel: model } = settings;
-  if (!key) throw new Error('未配置 API Key。');
-
-  const resp = await fetch(`${endpoint.replace(/\/$/, '')}/chat/completions`, {
+  const { apiKey: key, apiModel: model } = settings;
+  // Try Vercel API first (when deployed, OPENAI_API_KEY is in env)
+  try {
+    const apiResp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, model }),
+    });
+    const apiData = await apiResp.json().catch(() => ({}));
+    if (apiResp.ok && apiData.content) return apiData.content;
+    if (apiResp.status === 404) { /* fall through to direct */ }
+    else throw new Error(apiData.error || `请求失败 (${apiResp.status})`);
+  } catch (e) {
+    const msg = e.message || '';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
+      // No /api/chat (e.g. static host), fall through to direct call
+    } else {
+      throw e;
+    }
+  }
+  // Fallback: direct OpenAI (local with 大模型api.md)
+  if (!key) throw new Error('未配置 API Key。请在 Vercel 设置 OPENAI_API_KEY，或本地添加 大模型api.md');
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
     body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
   });
-
   if (!resp.ok) {
     const body = await resp.text();
     throw new Error(`请求失败 (${resp.status})：${body}`);
