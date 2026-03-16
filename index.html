@@ -992,6 +992,7 @@ let reportWeekOffset = 0;
 let editingTaskId    = null;
 let tasks            = loadTasks();
 let settings         = loadSettings();
+loadApiConfig();  // Load API key from 大模型api.md (provided by product owner)
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function todayStr() {
@@ -1048,6 +1049,22 @@ function loadSettings() {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
     return Object.assign({}, DEFAULT_SETTINGS, s);
   } catch { return Object.assign({}, DEFAULT_SETTINGS); }
+}
+
+async function loadApiConfig() {
+  try {
+    const resp = await fetch('./大模型api.md');
+    if (!resp.ok) return;
+    const text = await resp.text();
+    const keyMatch = text.match(/API_KEY\s*=\s*["']([^"']+)["']/);
+    const endpointMatch = text.match(/API_ENDPOINT\s*=\s*["']([^"']+)["']/);
+    if (keyMatch && keyMatch[1] && keyMatch[1] !== 'your-api-key-here') {
+      settings.apiKey = keyMatch[1].trim();
+    }
+    if (endpointMatch && endpointMatch[1]) {
+      settings.apiEndpoint = endpointMatch[1].trim();
+    }
+  } catch (_) {}
 }
 
 // ── Task CRUD ──────────────────────────────────────────────────────────────
