@@ -1,6 +1,9 @@
 # API keys - never commit to repository
 大模型api.md
 
+# Dependencies
+node_modules/
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -1,0 +1,13 @@
+{
+  "name": "zhoubao",
+  "version": "1.0.0",
+  "description": "AI周报与待办-轻松完成日程，轻松整理日报/周报",
+  "private": true,
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "start": "python3 -m http.server 8000"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.4.1"
+  }
+}
