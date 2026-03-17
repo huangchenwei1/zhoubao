@@ -6,6 +6,8 @@
   <meta name="description" content="帮你解决回忆每周工作项的难题，管理待办和写周报一站式解决" />
   <title>AI周报与待办-轻松完成日程，轻松整理日报/周报</title>
   <link rel="icon" href="favicon.png" type="image/png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#C85D3A" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet" />
   <style>
@@ -620,6 +622,33 @@
       color: var(--ink-3);
     }
 
+    /* ── PWA Install button ── */
+    .pwa-install-btn {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--ink-2);
+      font-size: 12px;
+      font-family: 'Noto Sans SC', sans-serif;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .pwa-install-btn.visible { display: flex; }
+    .pwa-install-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-bg);
+    }
+    .pwa-install-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
     /* ── Splash page (first visit only) ── */
     @keyframes splash-fade-up {
       from {
@@ -834,6 +863,14 @@
       <span class="app-name">AI 周报</span>
       <div class="brand-sep"></div>
       <span class="app-desc">记录每日任务，一键生成工作总结</span>
+      <button class="pwa-install-btn" id="pwaInstallBtn" title="Install App">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Install App
+      </button>
     </div>
     <div class="app-today">
       <video src="./Relax.webm" autoplay loop muted playsinline style="height:56px;width:auto;display:block;"></video>
@@ -1405,6 +1442,33 @@ function toggleQR(e) {
 function closeQR() {
   document.getElementById('qrOverlay').classList.remove('open');
 }
+
+// ── PWA Install ───────────────────────────────────────────────────────────
+(function() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(function() {});
+  }
+  var installBtn = document.getElementById('pwaInstallBtn');
+  var deferredPrompt;
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.classList.add('visible');
+  });
+  if (installBtn) {
+    installBtn.onclick = function() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function(r) {
+        if (r.outcome === 'accepted') installBtn.classList.remove('visible');
+        deferredPrompt = null;
+      });
+    };
+  }
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    if (installBtn) installBtn.style.display = 'none';
+  }
+})();
 
 // ── Init ───────────────────────────────────────────────────────────────────
 renderAll();
