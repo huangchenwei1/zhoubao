@@ -199,7 +199,7 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 0;
+      margin-bottom: 16px;
     }
     .rs-info { flex: 1; }
     .report-type-tabs {
@@ -825,11 +825,11 @@
       from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .rp-pane { display: none; flex-direction: column; gap: 14px; }
+    .rp-pane { display: none; flex-direction: column; gap: 20px; }
     .rp-pane.active { display: flex; }
-    .rp-block { display: flex; flex-direction: column; gap: 4px; }
+    .rp-block { display: flex; flex-direction: column; gap: 6px; }
     .rp-title { font-weight: 600; font-size: 15px; color: var(--ink); }
-    .rp-placeholder { display: flex; flex-direction: column; gap: 4px; }
+    .rp-placeholder { display: flex; flex-direction: column; gap: 4px; min-height: 72px; }
     .rp-placeholder .pl-num { font-size: 13px; color: #D4CBBf; font-weight: 500; }
     .rp-placeholder.loading .pl-num { color: var(--ink-3); font-style: italic; font-weight: 400; }
     .rp-content { display: none; white-space: pre-wrap; font-size: 13px; line-height: 1.55; color: var(--ink); outline: none; }
