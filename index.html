@@ -199,9 +199,36 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 16px;
+      margin-bottom: 0;
     }
     .rs-info { flex: 1; }
+    .report-type-tabs {
+      display: inline-flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 0;
+    }
+    .report-tab {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-weight: 500;
+      color: var(--ink-3);
+      background: transparent;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .report-tab:hover { color: var(--ink-2); }
+    .report-tab.active {
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .rs-meta-wrap { margin-top: 12px; }
     .rs-title {
       font-family: 'Noto Serif SC', serif;
       font-size: 18px;
@@ -246,9 +273,7 @@
     .rs-gen-btn:hover { background: #b05130; }
     .rs-gen-btn:disabled { opacity: .5; cursor: not-allowed; }
     .rs-output {
-      border-left: 2px solid var(--border);
-      padding-left: 18px;
-      min-height: 80px;
+      min-height: 60px;
     }
     .rs-output .report-box { border: none; background: none; padding: 0; margin-top: 0; border-radius: 0; }
     .rs-output .error-box { margin-top: 0; }
@@ -806,9 +831,14 @@
     }
     .report-box.loading { color: var(--ink-3); font-style: italic; }
     .report-loading { padding: 8px 0; }
-    .report-structured { display: flex; flex-direction: column; gap: 24px; }
-    .report-fixed-title { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
-    .report-fixed-content { white-space: pre-wrap; line-height: 1.9; min-height: 1em; outline: none; }
+    .report-box.report-structured { display: flex; }
+    .report-structured { flex-direction: column; gap: 6px; }
+    .report-fixed-content-wrap { position: relative; min-height: 0; }
+    .report-placeholder { position: absolute; top: 0; left: 0; display: flex; flex-direction: column; gap: 6px; padding: 0; pointer-events: none; }
+    .report-placeholder .rs-placeholder-line { display: flex; align-items: center; gap: 10px; }
+    .report-fixed-content:not(:empty) ~ .report-placeholder { display: none; }
+    .report-fixed-title { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 2px; text-align: left; }
+    .report-fixed-content { white-space: pre-wrap; line-height: 1.9; min-height: 1em; outline: none; text-align: left; }
     .report-footer {
       display: none;
       justify-content: space-between;
@@ -1080,10 +1110,6 @@
         gap: 12px;
       }
       .rs-gen-btn { align-self: flex-start; }
-      .rs-output {
-        padding-left: 12px;
-        border-left-width: 2px;
-      }
       .rs-title { font-size: 16px; }
 
       .splash-content { padding: 20px 16px; }
@@ -1214,72 +1240,65 @@
     <!-- ── 中列：日报 + 周报 各独立区块 ── -->
     <div class="col-right">
 
-      <!-- 日报区块 -->
+      <!-- 报告区块（日报/周报切换） -->
       <div class="report-section page-entrance page-entrance-4">
         <div class="rs-top">
           <div class="rs-info">
-            <div class="rs-title">日报</div>
-            <div class="rs-meta" id="dailyReportMeta"></div>
+            <div class="report-type-tabs">
+              <button type="button" class="report-tab active" data-type="daily" onclick="switchReportType('daily')">日报</button>
+              <button type="button" class="report-tab" data-type="weekly" onclick="switchReportType('weekly')">周报</button>
+            </div>
+            <div class="rs-meta-wrap">
+              <div class="rs-meta rs-meta-daily" id="dailyReportMeta"></div>
+              <div class="rs-meta rs-meta-weekly" id="reportWeekMeta" style="display:none">
+                <button class="week-nav-btn" onclick="changeReportWeek(-1)">&#8249;</button>
+                <span id="reportWeekLabel"></span>
+                <button class="week-nav-btn" id="reportWeekNextBtn" onclick="changeReportWeek(1)">&#8250;</button>
+              </div>
+            </div>
           </div>
-          <button class="rs-gen-btn" id="dailyGenBtn" onclick="generateReport('daily')">生成日报</button>
+          <button class="rs-gen-btn" id="reportGenBtn" onclick="generateReport(reportType)">生成日报</button>
         </div>
         <div class="rs-output">
-          <div class="rs-placeholder" id="placeholderDaily">
-            <div class="rs-placeholder-line"><span class="pl-num">1.</span></div>
-            <div class="rs-placeholder-line"><span class="pl-num">2.</span></div>
-            <div class="rs-placeholder-line"><span class="pl-num">3.</span></div>
-            <div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div>
-          </div>
-          <div id="reportOutputDaily" class="report-box report-structured">
+          <div id="reportOutputDaily" class="report-box report-structured report-pane" data-type="daily">
             <div class="report-fixed-block">
               <div class="report-fixed-title">今日完成</div>
-              <div class="report-fixed-content" id="reportContentDaily1" contenteditable="true" spellcheck="false"></div>
+              <div class="report-fixed-content-wrap">
+                <div class="report-fixed-content" id="reportContentDaily1" contenteditable="true" spellcheck="false"></div>
+                <div class="report-placeholder"><div class="rs-placeholder-line"><span class="pl-num">1.</span></div><div class="rs-placeholder-line"><span class="pl-num">2.</span></div><div class="rs-placeholder-line"><span class="pl-num">3.</span></div><div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div></div>
+              </div>
             </div>
             <div class="report-fixed-block">
               <div class="report-fixed-title">明日计划</div>
-              <div class="report-fixed-content" id="reportContentDaily2" contenteditable="true" spellcheck="false"></div>
+              <div class="report-fixed-content-wrap">
+                <div class="report-fixed-content" id="reportContentDaily2" contenteditable="true" spellcheck="false"></div>
+                <div class="report-placeholder"><div class="rs-placeholder-line"><span class="pl-num">1.</span></div><div class="rs-placeholder-line"><span class="pl-num">2.</span></div><div class="rs-placeholder-line"><span class="pl-num">3.</span></div><div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div></div>
+              </div>
             </div>
           </div>
-          <div id="reportErrorDaily" class="error-box"></div>
-          <div class="report-footer" id="reportFooterDaily">
-            <span class="edit-hint">点击内容可直接编辑</span>
-            <button class="copy-btn" onclick="copyReport('daily')">一键复制</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 周报区块 -->
-      <div class="report-section page-entrance page-entrance-5">
-        <div class="rs-top">
-          <div class="rs-info">
-            <div class="rs-title">周报</div>
-            <div class="rs-meta">
-              <button class="week-nav-btn" onclick="changeReportWeek(-1)">&#8249;</button>
-              <span id="reportWeekLabel"></span>
-              <button class="week-nav-btn" id="reportWeekNextBtn" onclick="changeReportWeek(1)">&#8250;</button>
-            </div>
-          </div>
-          <button class="rs-gen-btn" id="weeklyGenBtn" onclick="generateReport('weekly')">生成周报</button>
-        </div>
-        <div class="rs-output">
-          <div class="rs-placeholder" id="placeholderWeekly">
-            <div class="rs-placeholder-line"><span class="pl-num">1.</span></div>
-            <div class="rs-placeholder-line"><span class="pl-num">2.</span></div>
-            <div class="rs-placeholder-line"><span class="pl-num">3.</span></div>
-            <div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div>
-          </div>
-          <div id="reportOutputWeekly" class="report-box report-structured">
+          <div id="reportOutputWeekly" class="report-box report-structured report-pane" data-type="weekly" style="display:none">
             <div class="report-fixed-block">
               <div class="report-fixed-title">本周完成</div>
-              <div class="report-fixed-content" id="reportContentWeekly1" contenteditable="true" spellcheck="false"></div>
+              <div class="report-fixed-content-wrap">
+                <div class="report-fixed-content" id="reportContentWeekly1" contenteditable="true" spellcheck="false"></div>
+                <div class="report-placeholder"><div class="rs-placeholder-line"><span class="pl-num">1.</span></div><div class="rs-placeholder-line"><span class="pl-num">2.</span></div><div class="rs-placeholder-line"><span class="pl-num">3.</span></div><div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div></div>
+              </div>
             </div>
             <div class="report-fixed-block">
               <div class="report-fixed-title">下周计划</div>
-              <div class="report-fixed-content" id="reportContentWeekly2" contenteditable="true" spellcheck="false"></div>
+              <div class="report-fixed-content-wrap">
+                <div class="report-fixed-content" id="reportContentWeekly2" contenteditable="true" spellcheck="false"></div>
+                <div class="report-placeholder"><div class="rs-placeholder-line"><span class="pl-num">1.</span></div><div class="rs-placeholder-line"><span class="pl-num">2.</span></div><div class="rs-placeholder-line"><span class="pl-num">3.</span></div><div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div></div>
+              </div>
             </div>
           </div>
-          <div id="reportErrorWeekly" class="error-box"></div>
-          <div class="report-footer" id="reportFooterWeekly">
+          <div id="reportErrorDaily" class="error-box report-error" data-type="daily"></div>
+          <div id="reportErrorWeekly" class="error-box report-error" data-type="weekly" style="display:none"></div>
+          <div id="reportFooterDaily" class="report-footer report-footer-pane" data-type="daily">
+            <span class="edit-hint">点击内容可直接编辑</span>
+            <button class="copy-btn" onclick="copyReport('daily')">一键复制</button>
+          </div>
+          <div id="reportFooterWeekly" class="report-footer report-footer-pane" data-type="weekly" style="display:none">
             <span class="edit-hint">点击内容可直接编辑</span>
             <button class="copy-btn" onclick="copyReport('weekly')">一键复制</button>
           </div>
@@ -1368,6 +1387,7 @@ let openProgressDate    = null;
 let openWorkTypeTaskId  = null;
 let openWorkTypeDate    = null;
 let addingWorkType      = false;
+let reportType          = 'daily';
 let tasks            = loadTasks();
 let settings         = loadSettings();
 let workTypes        = loadWorkTypes();
@@ -1827,14 +1847,40 @@ function changeReportWeek(delta) {
   renderReportWeekLabel();
 }
 
+function switchReportType(type) {
+  reportType = type;
+  document.querySelectorAll('.report-tab').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+  document.getElementById('dailyReportMeta').style.display = type === 'daily' ? '' : 'none';
+  document.getElementById('reportWeekMeta').style.display = type === 'weekly' ? 'flex' : 'none';
+  document.querySelectorAll('.report-pane').forEach(function(el) {
+    var err = document.getElementById('reportError' + (el.dataset.type === 'daily' ? 'Daily' : 'Weekly'));
+    if (el.dataset.type === type) {
+      el.style.display = err && err.textContent ? 'none' : 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+  document.querySelectorAll('.report-error').forEach(function(el) {
+    el.style.display = el.dataset.type === type ? (el.textContent ? 'block' : 'none') : 'none';
+  });
+  document.querySelectorAll('.report-footer-pane').forEach(function(el) {
+    el.style.display = el.dataset.type === type ? 'flex' : 'none';
+  });
+  document.getElementById('reportGenBtn').textContent = type === 'daily' ? '生成日报' : '生成周报';
+}
+
 // ── Report Generation ──────────────────────────────────────────────────────
+var REPORT_PLACEHOLDER_HTML = '<div class="report-placeholder"><div class="rs-placeholder-line"><span class="pl-num">1.</span></div><div class="rs-placeholder-line"><span class="pl-num">2.</span></div><div class="rs-placeholder-line"><span class="pl-num">3.</span></div><div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div></div>';
+
 function renderReportStructure(type, part1, part2) {
   const suffix = type === 'daily' ? 'Daily' : 'Weekly';
   const titles = type === 'daily' ? ['今日完成', '明日计划'] : ['本周完成', '下周计划'];
   const ids = type === 'daily' ? ['reportContentDaily1', 'reportContentDaily2'] : ['reportContentWeekly1', 'reportContentWeekly2'];
   const outputEl = document.getElementById(`reportOutput${suffix}`);
   outputEl.className = 'report-box report-structured';
-  outputEl.innerHTML = '<div class="report-fixed-block"><div class="report-fixed-title">' + titles[0] + '</div><div class="report-fixed-content" id="' + ids[0] + '" contenteditable="true" spellcheck="false"></div></div><div class="report-fixed-block"><div class="report-fixed-title">' + titles[1] + '</div><div class="report-fixed-content" id="' + ids[1] + '" contenteditable="true" spellcheck="false"></div></div>';
+  outputEl.innerHTML = '<div class="report-fixed-block"><div class="report-fixed-title">' + titles[0] + '</div><div class="report-fixed-content-wrap"><div class="report-fixed-content" id="' + ids[0] + '" contenteditable="true" spellcheck="false"></div>' + REPORT_PLACEHOLDER_HTML + '</div></div><div class="report-fixed-block"><div class="report-fixed-title">' + titles[1] + '</div><div class="report-fixed-content-wrap"><div class="report-fixed-content" id="' + ids[1] + '" contenteditable="true" spellcheck="false"></div>' + REPORT_PLACEHOLDER_HTML + '</div></div>';
   document.getElementById(ids[0]).textContent = part1;
   document.getElementById(ids[1]).textContent = part2;
 }
@@ -1844,17 +1890,14 @@ async function generateReport(type) {
   const outputEl    = document.getElementById(`reportOutput${suffix}`);
   const errorEl     = document.getElementById(`reportError${suffix}`);
   const footerEl    = document.getElementById(`reportFooter${suffix}`);
-  const placeholder = document.getElementById(`placeholder${suffix}`);
-  const dailyBtn    = document.getElementById('dailyGenBtn');
-  const weekBtn     = document.getElementById('weeklyGenBtn');
+  const genBtn     = document.getElementById('reportGenBtn');
 
-  placeholder.style.display = 'none';
   errorEl.style.display     = 'none';
   footerEl.style.display    = 'none';
-  outputEl.style.display    = 'block';
-  outputEl.className        = 'report-box loading';
+  outputEl.style.display    = 'flex';
+  outputEl.className        = 'report-box report-structured report-pane loading';
   outputEl.innerHTML        = '<div class="report-loading">正在生成，请稍候…</div>';
-  dailyBtn.disabled = weekBtn.disabled = true;
+  genBtn.disabled = true;
 
   const taskData = type === 'daily' ? buildDailyData() : buildWeeklyData();
   const prompt   = type === 'daily' ? buildDailyPrompt(taskData) : buildWeeklyPrompt(taskData);
@@ -1871,7 +1914,7 @@ async function generateReport(type) {
     errorEl.style.display  = 'block';
     errorEl.textContent    = `生成失败：${err.message}`;
   } finally {
-    dailyBtn.disabled = weekBtn.disabled = false;
+    genBtn.disabled = false;
   }
 }
 
@@ -1879,8 +1922,8 @@ function buildDailyData() {
   const day = tasks[currentDate] || [];
   return {
     date:   currentDate,
-    done:   day.filter(t => t.done || getTaskProgress(t) === 100).map(t => ({ text: t.text, workType: t.workType })),
-    undone: day.filter(t => !t.done && getTaskProgress(t) < 100).map(t => ({ text: t.text, progress: getTaskProgress(t), workType: t.workType })),
+    done:   day.filter(t => getTaskProgress(t) > 0).map(t => ({ text: t.text, progress: getTaskProgress(t), workType: t.workType })),
+    undone: day.filter(t => getTaskProgress(t) < 100).map(t => ({ text: t.text, progress: getTaskProgress(t), workType: t.workType })),
   };
 }
 
@@ -1890,51 +1933,51 @@ function buildWeeklyData() {
   return {
     weekStart: dates[0],
     weekEnd:   dates[6],
-    done:      allTasks.filter(t => t.done || getTaskProgress(t) === 100).map(t => ({ text: t.text, date: t.date, workType: t.workType })),
-    undone:    allTasks.filter(t => !t.done && getTaskProgress(t) < 100).map(t => ({ text: t.text, date: t.date, progress: getTaskProgress(t), workType: t.workType })),
+    done:      allTasks.filter(t => getTaskProgress(t) > 0).map(t => ({ text: t.text, date: t.date, progress: getTaskProgress(t), workType: t.workType })),
+    undone:    allTasks.filter(t => getTaskProgress(t) < 100).map(t => ({ text: t.text, date: t.date, progress: getTaskProgress(t), workType: t.workType })),
   };
 }
 
 const REPORT_SECTION_DELIM = '---SECTION2---';
 
 function buildDailyPrompt({ date, done, undone }) {
-  const doneStr = done.length ? done.map((t, i) => `${i + 1}. ${t.text}${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  const doneStr = done.length ? done.map((t, i) => `${i + 1}. ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
   const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
   return `You are a professional workplace assistant. Generate a concise daily work report in Chinese.
 
 Date: ${date}
-Completed tasks:
+Today's work (tasks with progress, 25%/50%/75%/100% all count as work done today):
 ${doneStr}
-Incomplete tasks (with progress):
+Tasks not yet 100% (to continue or plan for tomorrow):
 ${undoneStr}
 
 Output format (Chinese only, no extra explanation):
 Output exactly TWO parts. Between the two parts, output exactly this line (nothing else on that line):
 ${REPORT_SECTION_DELIM}
 
-Part 1 - Completed: Group by work type. Use each work type name (e.g. VCast&Galaxy, VChat) as subsection title, list completed items under it. Tasks without work type can go under "其他".
-Part 2 - Tomorrow plan: Group by work type. Use each work type name as subsection title, list tomorrow's plan under it based on incomplete tasks.
+Part 1 - Today's work: Group by work type. Include all tasks that have progress (25%+). For partial progress (25%/50%/75%), you may note "partially done" or the progress. Tasks without work type can go under "其他".
+Part 2 - Tomorrow plan: Group by work type. List what to do tomorrow based on tasks not yet 100% (continue unfinished items, or new items with 0% progress). Tasks without work type can go under "其他".
 
 Do NOT output "今日完成" or "明日计划" - we add those as fixed UI labels.`;
 }
 
 function buildWeeklyPrompt({ weekStart, weekEnd, done, undone }) {
-  const doneStr = done.length ? done.map((t, i) => `${i + 1}. [${t.date}] ${t.text}${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  const doneStr = done.length ? done.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
   const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
   return `You are a professional workplace assistant. Generate a concise weekly work report in Chinese.
 
 Week: ${weekStart} to ${weekEnd}
-Completed tasks:
+This week's work (tasks with progress, 25%/50%/75%/100% all count as work done):
 ${doneStr}
-Incomplete tasks (with progress):
+Tasks not yet 100% (to continue or plan for next week):
 ${undoneStr}
 
 Output format (Chinese only, no extra explanation):
 Output exactly TWO parts. Between the two parts, output exactly this line (nothing else on that line):
 ${REPORT_SECTION_DELIM}
 
-Part 1 - Completed: Group by work type. Use each work type name as subsection title, list completed items under it. Tasks without work type can go under "其他".
-Part 2 - Next week plan: Group by work type. Use each work type name as subsection title, list next week's plan under it based on incomplete tasks.
+Part 1 - This week's work: Group by work type. Include all tasks that have progress (25%+). For partial progress (25%/50%/75%), you may note "partially done" or the progress. Tasks without work type can go under "其他".
+Part 2 - Next week plan: Group by work type. List what to do next week based on tasks not yet 100%. Tasks without work type can go under "其他".
 
 Do NOT output "本周完成" or "下周计划" - we add those as fixed UI labels.`;
 }
@@ -1979,7 +2022,7 @@ async function callLLM(prompt) {
 function copyReport(type) {
   const suffix = type === 'daily' ? 'Daily' : 'Weekly';
   const el     = document.getElementById(`reportOutput${suffix}`);
-  const btn    = document.querySelector(`#reportFooter${suffix} .copy-btn`);
+  const btn    = document.querySelector('#reportFooter' + suffix + ' .copy-btn');
   const titles = type === 'daily' ? ['今日完成', '明日计划'] : ['本周完成', '下周计划'];
   const ids    = type === 'daily' ? ['reportContentDaily1', 'reportContentDaily2'] : ['reportContentWeekly1', 'reportContentWeekly2'];
   const c1 = document.getElementById(ids[0]);
