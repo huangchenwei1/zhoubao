@@ -34,6 +34,7 @@
       background: var(--bg);
       color: var(--ink);
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     /* ── Full-width topbar ── */
@@ -351,21 +352,49 @@
     .add-btn:hover { background: #b05130; }
     .add-btn:active { transform: scale(.92); }
 
-    /* ── Task list ── */
-    .task-list { list-style: none; }
-    .task-item {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      animation: slideIn .18s ease;
+    /* ── Task table ── */
+    .task-table-wrap {
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
-    .task-item:last-child { border-bottom: none; }
+    .task-table-wrap::-webkit-scrollbar { display: none; }
+    .task-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .task-table th,
+    .task-table td {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+    }
+    .task-table thead th {
+      background: var(--bg);
+      color: var(--ink-2);
+      font-weight: 500;
+      font-size: 12px;
+    }
+    .task-table .col-num { width: 44px; text-align: center; color: var(--ink-3); font-size: 13px; border-left: none; }
+    .task-table .col-task { min-width: 180px; }
+    .task-table .col-task .task-cell-inner { display: flex; align-items: center; gap: 11px; }
+    .task-table .col-task .task-cell-inner .task-text,
+    .task-table .col-task .task-cell-inner .task-edit-input { flex: 1; min-width: 0; }
+    .task-table .col-progress { width: 100px; }
+    .task-table .col-worktype { width: 120px; border-right: none; white-space: nowrap; }
 
     @keyframes slideIn {
       from { opacity: 0; transform: translateY(-5px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes dropdownExpand {
+      from { opacity: 0; transform: scaleY(0.85); }
+      to   { opacity: 1; transform: scaleY(1); }
     }
 
     .task-check {
@@ -421,8 +450,255 @@
       flex-shrink: 0;
       transition: all .15s;
     }
-    .task-item:hover .del-btn { opacity: 1; }
+    .task-table tbody tr:hover .del-btn { opacity: 1; }
     .del-btn:hover { color: var(--accent); background: var(--accent-bg); }
+
+    /* task progress - pill button + dropdown */
+    .task-progress-wrap {
+      position: relative;
+      flex-shrink: 0;
+      transition: opacity .15s;
+    }
+    .task-table tbody tr .task-progress-wrap { opacity: 0; pointer-events: none; }
+    .task-table tbody tr:hover .task-progress-wrap,
+    .task-table tbody tr.task-progress-selected .task-progress-wrap { opacity: 1; pointer-events: auto; }
+    .task-progress-btn.empty { color: var(--ink-3); }
+    .task-progress-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--ink-2);
+      font-size: 12px;
+      font-family: 'Noto Sans SC', sans-serif;
+      cursor: pointer;
+      min-width: 56px;
+      transition: border-color .15s, background .15s;
+    }
+    .task-progress-btn.progress-pill {
+      position: relative;
+      overflow: hidden;
+    }
+    .task-progress-btn .progress-pill-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: #E7E0D4;
+      border-radius: 6px 0 0 6px;
+    }
+    .task-progress-btn .progress-pill-text {
+      position: relative;
+      z-index: 1;
+      color: var(--ink);
+      font-weight: 500;
+    }
+    .task-progress-btn:hover { border-color: var(--ink-3); }
+    .task-progress-btn.progress-done {
+      cursor: default;
+      pointer-events: none;
+      opacity: 1;
+      background: transparent;
+      border-color: #E5E5E5;
+    }
+    .task-progress-btn.progress-done .progress-pill-fill {
+      display: none;
+    }
+    .task-progress-btn.progress-done .progress-pill-text {
+      color: #B8B8B8;
+    }
+    .task-progress-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      padding: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      z-index: 10;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .task-progress-dropdown::-webkit-scrollbar { display: none; }
+    .task-progress-wrap.is-open .task-progress-dropdown { display: none; }
+    .task-progress-opt {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'Noto Sans SC', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .15s, background .15s;
+      position: relative;
+      overflow: hidden;
+      background: #F0EDE8;
+      min-width: 72px;
+    }
+    .task-progress-opt:hover { background: #E8E4DE; opacity: 1; }
+    .task-progress-opt .progress-pill-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: #E7E0D4;
+      border-radius: 8px 0 0 8px;
+    }
+    .task-progress-opt .progress-pill-text {
+      position: relative;
+      z-index: 1;
+      color: var(--ink-2);
+      font-weight: 500;
+    }
+
+    /* work type - tag + dropdown */
+    .task-worktype-wrap { position: relative; transition: opacity .15s; }
+    .task-table tbody tr .task-worktype-wrap { opacity: 0; pointer-events: none; }
+    .task-table tbody tr:hover .task-worktype-wrap,
+    .task-table tbody tr.task-worktype-selected .task-worktype-wrap { opacity: 1; pointer-events: auto; }
+    .task-worktype-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'Noto Sans SC', sans-serif;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--ink-2);
+      transition: all .15s;
+      min-width: 56px;
+      white-space: nowrap;
+    }
+    .task-worktype-btn.empty { color: var(--ink-3); }
+    .task-worktype-btn:hover { opacity: .9; }
+    .task-worktype-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      padding: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      z-index: 10;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 100px;
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .task-worktype-dropdown::-webkit-scrollbar { display: none; }
+    .task-worktype-wrap.is-open .task-worktype-dropdown { display: none; }
+    #dropdownPortal { position: fixed; z-index: 9999; top: 0; left: 0; pointer-events: none; }
+    #dropdownPortal > * { pointer-events: auto; }
+    .task-progress-dropdown-portal,
+    .task-worktype-dropdown-portal {
+      position: fixed;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transform-origin: top center;
+      animation: dropdownExpand 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+    .task-progress-dropdown-portal {
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      width: max-content;
+      min-width: 72px;
+      gap: 8px;
+    }
+    .task-progress-dropdown-portal::-webkit-scrollbar { display: none; }
+    .task-worktype-dropdown-portal {
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      min-width: 100px;
+      width: max-content;
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      gap: 8px;
+    }
+    .task-worktype-dropdown-portal::-webkit-scrollbar { display: none; }
+    .task-worktype-opt {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'Noto Sans SC', sans-serif;
+      cursor: pointer;
+      text-align: left;
+      transition: opacity .15s, background .15s;
+      gap: 8px;
+    }
+    .task-worktype-opt:hover { opacity: .9; }
+    .task-worktype-opt .wt-del {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      background: transparent;
+      color: inherit;
+      opacity: .6;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      transition: opacity .15s, background .15s;
+    }
+    .task-worktype-opt .wt-del:hover { opacity: 1; background: rgba(0,0,0,.08); }
+    .task-worktype-opt.task-worktype-null { background: #F0EDE8; color: var(--ink-3); }
+    .task-worktype-opt.task-worktype-null:hover { background: #E8E4DE; }
+    .task-worktype-add { color: var(--ink-2) !important; background: #F5F3EF !important; border: 1px dashed var(--border) !important; }
+    .task-worktype-add:hover { background: #EDE9E3 !important; }
+    .task-worktype-add-input {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'Noto Sans SC', sans-serif;
+      background: #F5F3EF;
+      color: var(--ink-2);
+      outline: none;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .task-worktype-add-input::placeholder { color: var(--ink-3); }
 
     /* task inline edit */
     .task-edit-input {
@@ -815,6 +1091,8 @@
       }
       .splash-btn { padding: 12px 24px; font-size: 15px; }
 
+      .task-progress-btn { padding: 5px 10px; font-size: 11px; min-width: 48px; }
+
       .feedback-btn {
         right: max(16px, env(safe-area-inset-right));
         bottom: max(16px, env(safe-area-inset-bottom));
@@ -911,7 +1189,19 @@
         <button class="add-btn" onclick="addTask()">+</button>
       </div>
 
-      <ul class="task-list" id="taskList"></ul>
+      <div class="task-table-wrap">
+        <table class="task-table">
+          <thead>
+            <tr>
+              <th class="col-num">#</th>
+              <th class="col-task">任务</th>
+              <th class="col-progress">进度</th>
+              <th class="col-worktype">工作&业务类型</th>
+            </tr>
+          </thead>
+          <tbody id="taskList"></tbody>
+        </table>
+      </div>
       <div class="empty-tip" id="emptyTip" style="display:none">
         <em>📋</em>今天还没有任务，添加一个吧
       </div>
@@ -986,6 +1276,9 @@
   </svg>
 </button>
 
+<!-- Dropdown portal (renders outside table to avoid clipping) -->
+<div id="dropdownPortal"></div>
+
 <!-- QR overlay -->
 <div class="qr-overlay" id="qrOverlay" onclick="closeQR()">
   <div class="qr-popup" onclick="event.stopPropagation()">
@@ -1014,8 +1307,29 @@
 })();
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const STORAGE_KEY  = 'report_tool_tasks';
-const SETTINGS_KEY = 'report_tool_settings';
+const STORAGE_KEY    = 'report_tool_tasks';
+const SETTINGS_KEY   = 'report_tool_settings';
+const WORK_TYPES_KEY = 'report_tool_work_types';
+const PROGRESS_OPTS  = [25, 50, 75];
+const DEFAULT_WORK_TYPES = [];
+const WORK_TYPE_COLORS = [
+  { bg: '#E8F0E8', fg: '#2d6a4a' },
+  { bg: '#E8EEF5', fg: '#3d6a9e' },
+  { bg: '#FDF0E8', fg: '#c85d3a' },
+  { bg: '#F0E8F5', fg: '#6b4a8e' },
+  { bg: '#F5E8EE', fg: '#9e4a6b' },
+  { bg: '#E8F5F2', fg: '#2d7a6a' },
+  { bg: '#F5F0E8', fg: '#8e7a4a' },
+  { bg: '#E8E8F5', fg: '#4a4a9e' },
+];
+
+function getWorkTypeColor(name) {
+  if (!name) return null;
+  const idx = workTypes.indexOf(name);
+  if (idx < 0) return WORK_TYPE_COLORS[0];
+  const c = WORK_TYPE_COLORS[idx % WORK_TYPE_COLORS.length];
+  return c;
+}
 
 const DEFAULT_SETTINGS = {
   apiKey:      '',  // Set your API key in settings or copy from 大模型api.example.md
@@ -1024,11 +1338,17 @@ const DEFAULT_SETTINGS = {
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
-let currentDate      = todayStr();
-let reportWeekOffset = 0;
-let editingTaskId    = null;
+let currentDate         = todayStr();
+let reportWeekOffset    = 0;
+let editingTaskId       = null;
+let openProgressTaskId   = null;
+let openProgressDate    = null;
+let openWorkTypeTaskId  = null;
+let openWorkTypeDate    = null;
+let addingWorkType      = false;
 let tasks            = loadTasks();
 let settings         = loadSettings();
+let workTypes        = loadWorkTypes();
 loadApiConfig();  // Load API key from 大模型api.md (provided by product owner)
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1088,6 +1408,17 @@ function loadSettings() {
   } catch { return Object.assign({}, DEFAULT_SETTINGS); }
 }
 
+function loadWorkTypes() {
+  try {
+    const w = JSON.parse(localStorage.getItem(WORK_TYPES_KEY));
+    return Array.isArray(w) ? w : [];
+  } catch { return []; }
+}
+
+function saveWorkTypes() {
+  localStorage.setItem(WORK_TYPES_KEY, JSON.stringify(workTypes));
+}
+
 async function loadApiConfig() {
   try {
     const resp = await fetch('./大模型api.md');
@@ -1110,7 +1441,7 @@ function addTask() {
   const text  = input.value.trim();
   if (!text) return;
   if (!tasks[currentDate]) tasks[currentDate] = [];
-  tasks[currentDate].push({ id: Date.now(), text, done: false, createdAt: new Date().toISOString() });
+  tasks[currentDate].push({ id: Date.now(), text, done: false, progress: null, workType: null, createdAt: new Date().toISOString() });
   saveTasks();
   input.value = '';
   renderAll();
@@ -1118,8 +1449,126 @@ function addTask() {
 
 function toggleTask(date, id) {
   const t = (tasks[date] || []).find(t => t.id === id);
-  if (t) { t.done = !t.done; saveTasks(); }
+  if (t) {
+    t.done = !t.done;
+    t.progress = t.done ? 100 : (t.progress !== null ? t.progress : 25);
+    saveTasks();
+  }
   renderAll();
+}
+
+function setTaskProgress(date, id, val) {
+  const t = (tasks[date] || []).find(t => t.id === id);
+  if (!t) return;
+  if (val === '' || val === null) return;
+  t.progress = parseInt(val, 10);
+  t.done = t.progress === 100;
+  openProgressTaskId = null;
+  openProgressDate = null;
+  saveTasks();
+  renderAll();
+}
+
+function toggleProgressDropdown(date, id, e) {
+  e.stopPropagation();
+  if (openProgressTaskId === id && openProgressDate === date) {
+    openProgressTaskId = null;
+    openProgressDate = null;
+  } else {
+    openProgressTaskId = id;
+    openProgressDate = date;
+    openWorkTypeTaskId = null;
+    openWorkTypeDate = null;
+  }
+  renderTaskList();
+}
+
+function closeProgressDropdown() {
+  openProgressTaskId = null;
+  openProgressDate = null;
+  renderTaskList();
+}
+
+function setTaskWorkType(date, id, val) {
+  const t = (tasks[date] || []).find(t => t.id === id);
+  if (!t) return;
+  t.workType = val || null;
+  openWorkTypeTaskId = null;
+  openWorkTypeDate = null;
+  saveTasks();
+  renderAll();
+}
+
+function toggleWorkTypeDropdown(date, id, e) {
+  e.stopPropagation();
+  if (openWorkTypeTaskId === id && openWorkTypeDate === date) {
+    openWorkTypeTaskId = null;
+    openWorkTypeDate = null;
+  } else {
+    openWorkTypeTaskId = id;
+    openWorkTypeDate = date;
+    openProgressTaskId = null;
+    openProgressDate = null;
+  }
+  renderTaskList();
+}
+
+function closeWorkTypeDropdown() {
+  openWorkTypeTaskId = null;
+  openWorkTypeDate = null;
+  renderTaskList();
+}
+
+function addWorkType(e, date, id) {
+  e.stopPropagation();
+  addingWorkType = true;
+  renderTaskList();
+  setTimeout(function() {
+    var inp = document.querySelector('.task-worktype-add-input');
+    if (inp) { inp.focus(); }
+  }, 50);
+}
+function confirmAddWorkType(name) {
+  name = (name || '').trim();
+  addingWorkType = false;
+  if (name) {
+    if (!workTypes.includes(name)) {
+      workTypes.push(name);
+      saveWorkTypes();
+    }
+    if (openWorkTypeDate && openWorkTypeTaskId) setTaskWorkType(openWorkTypeDate, openWorkTypeTaskId, name);
+  }
+  renderAll();
+}
+function cancelAddWorkType() {
+  addingWorkType = false;
+  renderTaskList();
+}
+function handleAddWorkTypeBlur(inp) {
+  var v = (inp && inp.value || '').trim();
+  if (v) confirmAddWorkType(v);
+  else cancelAddWorkType();
+}
+
+function removeWorkType(name) {
+  if (!name) return;
+  var idx = workTypes.indexOf(name);
+  if (idx < 0) return;
+  workTypes.splice(idx, 1);
+  saveWorkTypes();
+  Object.keys(tasks).forEach(function(date) {
+    tasks[date] = tasks[date].map(function(t) {
+      if (t.workType === name) t.workType = null;
+      return t;
+    });
+  });
+  saveTasks();
+  closeWorkTypeDropdown();
+  renderAll();
+}
+
+function getTaskProgress(t) {
+  return t.progress ?? (t.done ? 100 : 0);
 }
 
 function deleteTask(date, id) {
@@ -1177,19 +1626,48 @@ function renderTaskList() {
     list.innerHTML         = '';
     empty.style.display    = 'block';
     statsRow.style.display = 'none';
+    document.querySelector('.task-table-wrap').style.display = 'none';
     return;
   }
 
   empty.style.display    = 'none';
   statsRow.style.display = 'block';
+  document.querySelector('.task-table-wrap').style.display = 'block';
 
-  const doneCount = dayTasks.filter(t => t.done).length;
+  const doneCount = dayTasks.filter(t => t.done || getTaskProgress(t) === 100).length;
   document.getElementById('statTotal').textContent  = dayTasks.length;
   document.getElementById('statDone').textContent   = doneCount;
   document.getElementById('statUndone').textContent = dayTasks.length - doneCount;
 
-  list.innerHTML = dayTasks.map(t => {
+  window._portalProgressData = null;
+  window._portalWorkTypeData = null;
+  list.innerHTML = dayTasks.map((t, idx) => {
     const isEditing = t.id === editingTaskId;
+    const hasSelected = t.progress != null && (PROGRESS_OPTS.includes(t.progress) || t.progress === 100);
+    const rowCls = (hasSelected ? ' task-progress-selected' : '') + (t.workType ? ' task-worktype-selected' : '');
+    const displayProg = t.done ? 100 : (getTaskProgress(t) <= 25 ? 25 : getTaskProgress(t) <= 50 ? 50 : 75);
+    const btnContent = t.done
+      ? '<span class="progress-pill-fill" style="width:100%"></span><span class="progress-pill-text">已完成</span>'
+      : (hasSelected
+        ? '<span class="progress-pill-fill" style="width:' + displayProg + '%"></span><span class="progress-pill-text">' + displayProg + '%</span>'
+        : '进度');
+    const btnCls = (hasSelected || t.done) ? 'task-progress-btn progress-pill' : 'task-progress-btn empty';
+    const progressDisabled = t.done;
+    const isProgOpen = !progressDisabled && openProgressTaskId === t.id && openProgressDate === currentDate;
+    const progWrapCls = 'task-progress-wrap' + (isProgOpen ? ' is-open' : '');
+    const progOptsHtml = PROGRESS_OPTS.map(function(p) {
+      return '<button type="button" class="task-progress-opt" onclick="setTaskProgress(\'' + currentDate + '\',' + t.id + ',' + p + ')"><span class="progress-pill-fill" style="width:' + p + '%"></span><span class="progress-pill-text">' + p + '%</span></button>';
+    }).join('');
+    if (isProgOpen) window._portalProgressData = { html: progOptsHtml, triggerId: currentDate + '-' + t.id };
+    const workTypeLabel = t.workType || '选择类型';
+    const isWtOpen = openWorkTypeTaskId === t.id && openWorkTypeDate === currentDate;
+    const wtWrapCls = 'task-worktype-wrap' + (isWtOpen ? ' is-open' : '');
+    const wtOptsHtml = '<button type="button" class="task-worktype-opt task-worktype-null" onclick="setTaskWorkType(\'' + currentDate + '\',' + t.id + ',null)">—</button>' + workTypes.map(function(w, wi) {
+      var c = WORK_TYPE_COLORS[wi % WORK_TYPE_COLORS.length];
+      var wEsc = (w + '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return '<button type="button" class="task-worktype-opt" style="background:' + c.bg + ';color:' + c.fg + '" onclick="setTaskWorkType(\'' + currentDate + '\',' + t.id + ',\'' + wEsc + '\')"><span>' + escHtml(w) + '</span><span class="wt-del" onclick="event.stopPropagation();removeWorkType(\'' + wEsc + '\')" title="删除类型">×</span></button>';
+    }).join('') + (addingWorkType && isWtOpen ? '<input type="text" class="task-worktype-add-input" placeholder="输入类型名称" onblur="handleAddWorkTypeBlur(this)" onkeydown="if(event.key===\'Enter\'){confirmAddWorkType(this.value);event.preventDefault()}if(event.key===\'Escape\'){cancelAddWorkType();event.preventDefault()}">' : '<button type="button" class="task-worktype-opt task-worktype-add" onclick="addWorkType(event,\'' + currentDate + '\',' + t.id + ')">+ 添加类型</button>');
+    if (isWtOpen) window._portalWorkTypeData = { html: wtOptsHtml, triggerId: currentDate + '-' + t.id };
     const textPart = isEditing
       ? `<input class="task-edit-input" value="${escHtml(t.text)}"
                onblur="saveTaskEdit('${currentDate}', ${t.id}, this.value)"
@@ -1198,25 +1676,72 @@ function renderTaskList() {
       : `<span class="task-text ${t.done ? 'done' : ''}"
                onclick="startTaskEdit(${t.id})">${escHtml(t.text)}</span>`;
     return `
-    <li class="task-item">
-      <label class="task-check">
-        <input type="checkbox" ${t.done ? 'checked' : ''}
-               onchange="toggleTask('${currentDate}', ${t.id})" />
-        <div class="check-box">
-          <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
-            <path d="M1 3.5L4 6.5L10 1" stroke="white" stroke-width="1.8"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+    <tr class="${rowCls}">
+      <td class="col-num">${idx + 1}</td>
+      <td class="col-task">
+        <div class="task-cell-inner">
+          <label class="task-check">
+            <input type="checkbox" ${t.done ? 'checked' : ''}
+                   onchange="toggleTask('${currentDate}', ${t.id})" />
+            <div class="check-box">
+              <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+                <path d="M1 3.5L4 6.5L10 1" stroke="white" stroke-width="1.8"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </label>
+          ${textPart}
+          <button class="del-btn" onclick="deleteTask('${currentDate}', ${t.id})" title="删除">×</button>
         </div>
-      </label>
-      ${textPart}
-      <button class="del-btn" onclick="deleteTask('${currentDate}', ${t.id})" title="删除">×</button>
-    </li>`;
+      </td>
+      <td class="col-progress">
+        <div class="${progWrapCls}">
+          <button type="button" class="${btnCls}${progressDisabled ? ' progress-done' : ''}" data-progress-trigger="${currentDate}-${t.id}" ${progressDisabled ? '' : 'onclick="toggleProgressDropdown(\'' + currentDate + '\',' + t.id + ', event)"'}>${btnContent}</button>
+          <div class="task-progress-dropdown">${progOptsHtml}</div>
+        </div>
+      </td>
+      <td class="col-worktype">
+        <div class="${wtWrapCls}">
+          <button type="button" class="task-worktype-btn ${!t.workType ? 'empty' : ''}" data-worktype-trigger="${currentDate}-${t.id}" ${t.workType ? 'style="border-color:' + (getWorkTypeColor(t.workType).fg) + ';color:' + (getWorkTypeColor(t.workType).fg) + '"' : ''} onclick="toggleWorkTypeDropdown('${currentDate}', ${t.id}, event)">${escHtml(workTypeLabel)}</button>
+          <div class="task-worktype-dropdown">${wtOptsHtml}</div>
+        </div>
+      </td>
+    </tr>`;
   }).join('');
 
   if (editingTaskId !== null) {
     const inp = document.querySelector('.task-edit-input');
     if (inp) { inp.focus(); inp.select(); }
+  }
+  setTimeout(renderDropdownPortal, 0);
+}
+
+function renderDropdownPortal() {
+  var portal = document.getElementById('dropdownPortal');
+  portal.innerHTML = '';
+  var pd = window._portalProgressData;
+  var wd = window._portalWorkTypeData;
+  if (pd) {
+    var btn = document.querySelector('[data-progress-trigger="' + pd.triggerId + '"]');
+    if (btn) {
+      var r = btn.getBoundingClientRect();
+      var el = document.createElement('div');
+      el.className = 'task-progress-dropdown task-progress-dropdown-portal';
+      el.style.cssText = 'left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;';
+      el.innerHTML = pd.html;
+      portal.appendChild(el);
+    }
+  }
+  if (wd) {
+    var btn = document.querySelector('[data-worktype-trigger="' + wd.triggerId + '"]');
+    if (btn) {
+      var r = btn.getBoundingClientRect();
+      var el = document.createElement('div');
+      el.className = 'task-worktype-dropdown task-worktype-dropdown-portal';
+      el.style.cssText = 'left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;';
+      el.innerHTML = wd.html;
+      portal.appendChild(el);
+    }
   }
 }
 
@@ -1321,8 +1846,8 @@ function buildDailyData() {
   const day = tasks[currentDate] || [];
   return {
     date:   currentDate,
-    done:   day.filter(t =>  t.done).map(t => t.text),
-    undone: day.filter(t => !t.done).map(t => t.text),
+    done:   day.filter(t => t.done || getTaskProgress(t) === 100).map(t => ({ text: t.text, workType: t.workType })),
+    undone: day.filter(t => !t.done && getTaskProgress(t) < 100).map(t => ({ text: t.text, progress: getTaskProgress(t), workType: t.workType })),
   };
 }
 
@@ -1332,46 +1857,50 @@ function buildWeeklyData() {
   return {
     weekStart: dates[0],
     weekEnd:   dates[6],
-    done:      allTasks.filter(t =>  t.done).map(t => `[${t.date}] ${t.text}`),
-    undone:    allTasks.filter(t => !t.done).map(t => `[${t.date}] ${t.text}`),
+    done:      allTasks.filter(t => t.done || getTaskProgress(t) === 100).map(t => ({ text: t.text, date: t.date, workType: t.workType })),
+    undone:    allTasks.filter(t => !t.done && getTaskProgress(t) < 100).map(t => ({ text: t.text, date: t.date, progress: getTaskProgress(t), workType: t.workType })),
   };
 }
 
 function buildDailyPrompt({ date, done, undone }) {
+  const doneStr = done.length ? done.map((t, i) => `${i + 1}. ${t.text}${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
   return `You are a professional workplace assistant. Generate a concise daily work report in Chinese.
 
 Date: ${date}
 Completed tasks:
-${done.length ? done.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
-Incomplete tasks:
-${undone.length ? undone.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
+${doneStr}
+Incomplete tasks (with progress):
+${undoneStr}
 
 Output format (Chinese only, no extra explanation):
 【今日完成】
-（列出已完成事项）
+（按工作类型归纳已完成事项）
 
 【未完成事项】
-（列出未完成事项，如无则写"无"）
+（列出未完成事项及进度，如无则写"无"）
 
 【明日计划】
 （根据未完成事项给出明天的具体计划）`;
 }
 
 function buildWeeklyPrompt({ weekStart, weekEnd, done, undone }) {
+  const doneStr = done.length ? done.map((t, i) => `${i + 1}. [${t.date}] ${t.text}${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
   return `You are a professional workplace assistant. Generate a concise weekly work report in Chinese.
 
 Week: ${weekStart} to ${weekEnd}
 Completed tasks:
-${done.length ? done.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
-Incomplete tasks:
-${undone.length ? undone.map((t,i) => `${i+1}. ${t}`).join('\n') : 'None'}
+${doneStr}
+Incomplete tasks (with progress):
+${undoneStr}
 
 Output format (Chinese only, no extra explanation):
 【本周完成】
-（按主题归纳本周完成的工作）
+（按工作类型归纳本周完成的工作）
 
 【下周计划】
-（根据未完成事项制定下周合理计划）`;
+（根据未完成事项及进度制定下周合理计划）`;
 }
 
 async function callLLM(prompt) {
@@ -1469,6 +1998,12 @@ function closeQR() {
     if (installBtn) installBtn.style.display = 'none';
   }
 })();
+
+// ── Click outside to close progress dropdown ───────────────────────────────
+document.addEventListener('click', function(e) {
+  if (openProgressTaskId !== null && !e.target.closest('.task-progress-wrap') && !e.target.closest('#dropdownPortal .task-progress-dropdown-portal')) closeProgressDropdown();
+  if (openWorkTypeTaskId !== null && !e.target.closest('.task-worktype-wrap') && !e.target.closest('#dropdownPortal .task-worktype-dropdown-portal')) closeWorkTypeDropdown();
+});
 
 // ── Init ───────────────────────────────────────────────────────────────────
 renderAll();
