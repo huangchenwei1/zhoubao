@@ -837,7 +837,7 @@
     .report-placeholder .rs-placeholder-line { display: flex; align-items: center; gap: 10px; }
     .report-fixed-content:not(:empty) ~ .report-placeholder { display: none; }
     .report-fixed-title { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 4px; text-align: left; }
-    .report-fixed-content { white-space: pre-wrap; line-height: 1.45; min-height: 1em; outline: none; text-align: left; font-size: 13px; padding: 0; margin: 0; }
+    .report-fixed-content { white-space: pre-wrap; line-height: 1.35; min-height: 1em; outline: none; text-align: left; font-size: 13px; padding: 0; margin: 0; }
     .report-footer {
       display: none;
       justify-content: space-between;
@@ -1872,6 +1872,9 @@ function switchReportType(type) {
 
 // ── Report Generation ──────────────────────────────────────────────────────
 function renderReportStructure(type, part1, part2) {
+  var compact = function(s) { return (s || '').replace(/\n{3,}/g, '\n\n').trim(); };
+  part1 = compact(part1);
+  part2 = compact(part2);
   const ids = type === 'daily' ? ['reportContentDaily1', 'reportContentDaily2'] : ['reportContentWeekly1', 'reportContentWeekly2'];
   var c1 = document.getElementById(ids[0]);
   var c2 = document.getElementById(ids[1]);
@@ -1963,7 +1966,7 @@ ${REPORT_SECTION_DELIM}
 Part 1 - Today's work: Group by work type. Include all tasks that have progress (25%+). For partial progress (25%/50%/75%), you may note "partially done" or the progress. Tasks without work type can go under "其他".
 Part 2 - Tomorrow plan: Group by work type. List what to do tomorrow based on tasks not yet 100% (continue unfinished items, or new items with 0% progress). Tasks without work type can go under "其他".
 
-Do NOT output "今日完成" or "明日计划" - we add those as fixed UI labels.`;
+Format: Use compact layout. One blank line between categories, single newline between list items. No extra empty lines. Do NOT output "今日完成" or "明日计划" - we add those as fixed UI labels.`;
 }
 
 function buildWeeklyPrompt({ weekStart, weekEnd, done, undone }) {
@@ -1984,7 +1987,7 @@ ${REPORT_SECTION_DELIM}
 Part 1 - This week's work: Group by work type. Include all tasks that have progress (25%+). For partial progress (25%/50%/75%), you may note "partially done" or the progress. Tasks without work type can go under "其他".
 Part 2 - Next week plan: Group by work type. List what to do next week based on tasks not yet 100%. Tasks without work type can go under "其他".
 
-Do NOT output "本周完成" or "下周计划" - we add those as fixed UI labels.`;
+Format: Use compact layout. One blank line between categories, single newline between list items. No extra empty lines. Do NOT output "本周完成" or "下周计划" - we add those as fixed UI labels.`;
 }
 
 async function callLLM(prompt) {
