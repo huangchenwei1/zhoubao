@@ -832,12 +832,12 @@
     .report-placeholder.loading { color: var(--ink-3); font-style: italic; }
     .report-box.report-structured { display: flex; }
     .report-structured { flex-direction: column; gap: 6px; }
-    .report-fixed-content-wrap { position: relative; min-height: 0; }
+    .report-fixed-content-wrap { position: relative; min-height: 72px; }
     .report-placeholder { position: absolute; top: 0; left: 0; display: flex; flex-direction: column; gap: 6px; padding: 0; pointer-events: none; font-size: 13px; }
     .report-placeholder .rs-placeholder-line { display: flex; align-items: center; gap: 10px; }
     .report-fixed-content:not(:empty) ~ .report-placeholder { display: none; }
     .report-fixed-title { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 2px; text-align: left; }
-    .report-fixed-content { white-space: pre-wrap; line-height: 1.6; min-height: 1em; outline: none; text-align: left; font-size: 13px; }
+    .report-fixed-content { white-space: pre-wrap; line-height: 1.6; min-height: 1em; outline: none; text-align: left; font-size: 13px; padding: 0; margin: 0; }
     .report-footer {
       display: none;
       justify-content: space-between;
@@ -1871,17 +1871,12 @@ function switchReportType(type) {
 }
 
 // ── Report Generation ──────────────────────────────────────────────────────
-var REPORT_PLACEHOLDER_HTML = '<div class="report-placeholder"><div class="rs-placeholder-line"><span class="pl-num">1.</span></div><div class="rs-placeholder-line"><span class="pl-num">2.</span></div><div class="rs-placeholder-line"><span class="pl-num">3.</span></div><div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div></div>';
-
 function renderReportStructure(type, part1, part2) {
-  const suffix = type === 'daily' ? 'Daily' : 'Weekly';
-  const titles = type === 'daily' ? ['今日完成', '明日计划'] : ['本周完成', '下周计划'];
   const ids = type === 'daily' ? ['reportContentDaily1', 'reportContentDaily2'] : ['reportContentWeekly1', 'reportContentWeekly2'];
-  const outputEl = document.getElementById(`reportOutput${suffix}`);
-  outputEl.className = 'report-box report-structured';
-  outputEl.innerHTML = '<div class="report-fixed-block"><div class="report-fixed-title">' + titles[0] + '</div><div class="report-fixed-content-wrap"><div class="report-fixed-content" id="' + ids[0] + '" contenteditable="true" spellcheck="false"></div>' + REPORT_PLACEHOLDER_HTML + '</div></div><div class="report-fixed-block"><div class="report-fixed-title">' + titles[1] + '</div><div class="report-fixed-content-wrap"><div class="report-fixed-content" id="' + ids[1] + '" contenteditable="true" spellcheck="false"></div>' + REPORT_PLACEHOLDER_HTML + '</div></div>';
-  document.getElementById(ids[0]).textContent = part1;
-  document.getElementById(ids[1]).textContent = part2;
+  var c1 = document.getElementById(ids[0]);
+  var c2 = document.getElementById(ids[1]);
+  if (c1) { c1.textContent = part1; }
+  if (c2) { c2.textContent = part2; }
 }
 
 async function generateReport(type) {
