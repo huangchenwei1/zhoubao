@@ -1964,53 +1964,69 @@ function buildWeeklyData() {
 const REPORT_SECTION_DELIM = '---SECTION2---';
 
 function buildDailyPrompt({ date, done, undone }) {
-  const doneStr = done.length ? done.map((t, i) => `${i + 1}. ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
-  const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
-  return `You are a professional workplace assistant. Generate a concise daily work report in Chinese.
+  const doneStr = done.length ? done.map((t, i) => `${i + 1}. ${t.text} (current progress: ${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. ${t.text} (current progress: ${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  return `You are a professional workplace assistant. Generate a polished, natural-sounding daily work report in Chinese.
 
 Date: ${date}
-Today's work (tasks with progress, 25%/50%/75%/100% all count as work done today):
+Today's work (tasks with any progress):
 ${doneStr}
-Tasks not yet 100% (to continue or plan for tomorrow):
+Tasks not yet 100% (to plan for tomorrow):
 ${undoneStr}
 
 Output format (Chinese only, no extra explanation):
 Output exactly TWO parts. Between the two parts, output exactly this line (nothing else on that line):
 ${REPORT_SECTION_DELIM}
 
-Part 1 - Today's work: Group by work type. Include all tasks that have progress (25%+). For partial progress (not 100%), MUST show the exact percentage, e.g. "(50%)". Tasks without work type can go under "其他".
-Part 2 - Tomorrow plan: Group by work type. List what to do tomorrow based on tasks not yet 100% (continue unfinished items, or new items with 0% progress). Tasks without work type can go under "其他".
+Part 1 - Today's completed work:
+- Group by work type. For each task, rewrite the raw task text into natural, professional Chinese workplace language (do not just copy the raw text verbatim).
+- For partial progress (not 100%), show the exact current percentage, e.g. "(进度50%)".
+- Tasks without work type go under "其他".
+
+Part 2 - Tomorrow's plan:
+- Group by work type. For each unfinished task, describe what action to take tomorrow to push it forward.
+- Show a reasonable TARGET progress to reach tomorrow (e.g. current 50% → target 75%-100%), NOT the current progress. Format: "(目标XX%)".
+- Rewrite into natural action-oriented Chinese (e.g. "继续推进..." "完成..." "跟进...").
+- Tasks without work type go under "其他".
 
 Format rules:
-- Work type group label: use numbered list (1. 2. 3.) for groups
-- Items under each group: use bullet points (- item) NOT numbered list
-- Compact layout: minimal blank lines, single newline between items
-- Do NOT output "今日完成" or "明日计划" - we add those as fixed UI labels.`;
+- Work type group label: numbered (1. 2. 3.)
+- Items under each group: bullet points (- item) NOT numbered
+- Compact: minimal blank lines, single newline between items
+- Do NOT output "今日完成" or "明日计划" labels.`;
 }
 
 function buildWeeklyPrompt({ weekStart, weekEnd, done, undone }) {
-  const doneStr = done.length ? done.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
-  const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
-  return `You are a professional workplace assistant. Generate a concise weekly work report in Chinese.
+  const doneStr = done.length ? done.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (current progress: ${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (current progress: ${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  return `You are a professional workplace assistant. Generate a polished, natural-sounding weekly work report in Chinese.
 
 Week: ${weekStart} to ${weekEnd}
-This week's work (tasks with progress, 25%/50%/75%/100% all count as work done):
+This week's work (tasks with any progress):
 ${doneStr}
-Tasks not yet 100% (to continue or plan for next week):
+Tasks not yet 100% (to plan for next week):
 ${undoneStr}
 
 Output format (Chinese only, no extra explanation):
 Output exactly TWO parts. Between the two parts, output exactly this line (nothing else on that line):
 ${REPORT_SECTION_DELIM}
 
-Part 1 - This week's work: Group by work type. Include all tasks that have progress (25%+). For partial progress (not 100%), MUST show the exact percentage, e.g. "(50%)". Tasks without work type can go under "其他".
-Part 2 - Next week plan: Group by work type. List what to do next week based on tasks not yet 100%. Tasks without work type can go under "其他".
+Part 1 - This week's completed work:
+- Group by work type. For each task, rewrite the raw task text into natural, professional Chinese workplace language (do not just copy the raw text verbatim).
+- For partial progress (not 100%), show the exact current percentage, e.g. "(进度50%)".
+- Tasks without work type go under "其他".
+
+Part 2 - Next week's plan:
+- Group by work type. For each unfinished task, describe what action to take next week to push it forward.
+- Show a reasonable TARGET progress to reach next week (e.g. current 50% → target 75%-100%), NOT the current progress. Format: "(目标XX%)".
+- Rewrite into natural action-oriented Chinese (e.g. "持续推进..." "计划完成..." "跟进...").
+- Tasks without work type go under "其他".
 
 Format rules:
-- Work type group label: use numbered list (1. 2. 3.) for groups
-- Items under each group: use bullet points (- item) NOT numbered list
-- Compact layout: minimal blank lines, single newline between items
-- Do NOT output "本周完成" or "下周计划" - we add those as fixed UI labels.`;
+- Work type group label: numbered (1. 2. 3.)
+- Items under each group: bullet points (- item) NOT numbered
+- Compact: minimal blank lines, single newline between items
+- Do NOT output "本周完成" or "下周计划" labels.`;
 }
 
 async function callLLM(prompt) {
