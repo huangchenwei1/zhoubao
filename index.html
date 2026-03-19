@@ -805,6 +805,10 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .report-box.loading { color: var(--ink-3); font-style: italic; }
+    .report-loading { padding: 8px 0; }
+    .report-structured { display: flex; flex-direction: column; gap: 24px; }
+    .report-fixed-title { font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
+    .report-fixed-content { white-space: pre-wrap; line-height: 1.9; min-height: 1em; outline: none; }
     .report-footer {
       display: none;
       justify-content: space-between;
@@ -1226,7 +1230,16 @@
             <div class="rs-placeholder-line"><span class="pl-num">3.</span></div>
             <div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div>
           </div>
-          <div id="reportOutputDaily" class="report-box"></div>
+          <div id="reportOutputDaily" class="report-box report-structured">
+            <div class="report-fixed-block">
+              <div class="report-fixed-title">今日完成</div>
+              <div class="report-fixed-content" id="reportContentDaily1" contenteditable="true" spellcheck="false"></div>
+            </div>
+            <div class="report-fixed-block">
+              <div class="report-fixed-title">明日计划</div>
+              <div class="report-fixed-content" id="reportContentDaily2" contenteditable="true" spellcheck="false"></div>
+            </div>
+          </div>
           <div id="reportErrorDaily" class="error-box"></div>
           <div class="report-footer" id="reportFooterDaily">
             <span class="edit-hint">点击内容可直接编辑</span>
@@ -1255,7 +1268,16 @@
             <div class="rs-placeholder-line"><span class="pl-num">3.</span></div>
             <div class="rs-placeholder-line"><span class="pl-num" style="color:#E0D8CF">···</span></div>
           </div>
-          <div id="reportOutputWeekly" class="report-box"></div>
+          <div id="reportOutputWeekly" class="report-box report-structured">
+            <div class="report-fixed-block">
+              <div class="report-fixed-title">本周完成</div>
+              <div class="report-fixed-content" id="reportContentWeekly1" contenteditable="true" spellcheck="false"></div>
+            </div>
+            <div class="report-fixed-block">
+              <div class="report-fixed-title">下周计划</div>
+              <div class="report-fixed-content" id="reportContentWeekly2" contenteditable="true" spellcheck="false"></div>
+            </div>
+          </div>
           <div id="reportErrorWeekly" class="error-box"></div>
           <div class="report-footer" id="reportFooterWeekly">
             <span class="edit-hint">点击内容可直接编辑</span>
@@ -1806,6 +1828,17 @@ function changeReportWeek(delta) {
 }
 
 // ── Report Generation ──────────────────────────────────────────────────────
+function renderReportStructure(type, part1, part2) {
+  const suffix = type === 'daily' ? 'Daily' : 'Weekly';
+  const titles = type === 'daily' ? ['今日完成', '明日计划'] : ['本周完成', '下周计划'];
+  const ids = type === 'daily' ? ['reportContentDaily1', 'reportContentDaily2'] : ['reportContentWeekly1', 'reportContentWeekly2'];
+  const outputEl = document.getElementById(`reportOutput${suffix}`);
+  outputEl.className = 'report-box report-structured';
+  outputEl.innerHTML = '<div class="report-fixed-block"><div class="report-fixed-title">' + titles[0] + '</div><div class="report-fixed-content" id="' + ids[0] + '" contenteditable="true" spellcheck="false"></div></div><div class="report-fixed-block"><div class="report-fixed-title">' + titles[1] + '</div><div class="report-fixed-content" id="' + ids[1] + '" contenteditable="true" spellcheck="false"></div></div>';
+  document.getElementById(ids[0]).textContent = part1;
+  document.getElementById(ids[1]).textContent = part2;
+}
+
 async function generateReport(type) {
   const suffix      = type === 'daily' ? 'Daily' : 'Weekly';
   const outputEl    = document.getElementById(`reportOutput${suffix}`);
@@ -1820,19 +1853,19 @@ async function generateReport(type) {
   footerEl.style.display    = 'none';
   outputEl.style.display    = 'block';
   outputEl.className        = 'report-box loading';
-  outputEl.textContent      = '正在生成，请稍候…';
+  outputEl.innerHTML        = '<div class="report-loading">正在生成，请稍候…</div>';
   dailyBtn.disabled = weekBtn.disabled = true;
 
   const taskData = type === 'daily' ? buildDailyData() : buildWeeklyData();
   const prompt   = type === 'daily' ? buildDailyPrompt(taskData) : buildWeeklyPrompt(taskData);
 
   try {
-    const text                     = await callLLM(prompt);
-    outputEl.className             = 'report-box';
-    outputEl.textContent           = text;
-    outputEl.contentEditable       = 'true';
-    outputEl.spellcheck            = false;
-    footerEl.style.display         = 'flex';
+    const text = await callLLM(prompt);
+    const parts = text.split(REPORT_SECTION_DELIM);
+    const p1 = (parts[0] || '').trim();
+    const p2 = (parts.length > 1 ? parts.slice(1).join(REPORT_SECTION_DELIM).trim() : '');
+    renderReportStructure(type, p1, p2);
+    footerEl.style.display = 'flex';
   } catch (err) {
     outputEl.style.display = 'none';
     errorEl.style.display  = 'block';
@@ -1862,6 +1895,8 @@ function buildWeeklyData() {
   };
 }
 
+const REPORT_SECTION_DELIM = '---SECTION2---';
+
 function buildDailyPrompt({ date, done, undone }) {
   const doneStr = done.length ? done.map((t, i) => `${i + 1}. ${t.text}${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
   const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. ${t.text} (${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
@@ -1874,14 +1909,13 @@ Incomplete tasks (with progress):
 ${undoneStr}
 
 Output format (Chinese only, no extra explanation):
-【今日完成】
-（按工作类型归纳已完成事项）
+Output exactly TWO parts. Between the two parts, output exactly this line (nothing else on that line):
+${REPORT_SECTION_DELIM}
 
-【未完成事项】
-（列出未完成事项及进度，如无则写"无"）
+Part 1 - Completed: Group by work type. Use each work type name (e.g. VCast&Galaxy, VChat) as subsection title, list completed items under it. Tasks without work type can go under "其他".
+Part 2 - Tomorrow plan: Group by work type. Use each work type name as subsection title, list tomorrow's plan under it based on incomplete tasks.
 
-【明日计划】
-（根据未完成事项给出明天的具体计划）`;
+Do NOT output "今日完成" or "明日计划" - we add those as fixed UI labels.`;
 }
 
 function buildWeeklyPrompt({ weekStart, weekEnd, done, undone }) {
@@ -1896,11 +1930,13 @@ Incomplete tasks (with progress):
 ${undoneStr}
 
 Output format (Chinese only, no extra explanation):
-【本周完成】
-（按工作类型归纳本周完成的工作）
+Output exactly TWO parts. Between the two parts, output exactly this line (nothing else on that line):
+${REPORT_SECTION_DELIM}
 
-【下周计划】
-（根据未完成事项及进度制定下周合理计划）`;
+Part 1 - Completed: Group by work type. Use each work type name as subsection title, list completed items under it. Tasks without work type can go under "其他".
+Part 2 - Next week plan: Group by work type. Use each work type name as subsection title, list next week's plan under it based on incomplete tasks.
+
+Do NOT output "本周完成" or "下周计划" - we add those as fixed UI labels.`;
 }
 
 async function callLLM(prompt) {
@@ -1944,7 +1980,11 @@ function copyReport(type) {
   const suffix = type === 'daily' ? 'Daily' : 'Weekly';
   const el     = document.getElementById(`reportOutput${suffix}`);
   const btn    = document.querySelector(`#reportFooter${suffix} .copy-btn`);
-  const text   = el.innerText;
+  const titles = type === 'daily' ? ['今日完成', '明日计划'] : ['本周完成', '下周计划'];
+  const ids    = type === 'daily' ? ['reportContentDaily1', 'reportContentDaily2'] : ['reportContentWeekly1', 'reportContentWeekly2'];
+  const c1 = document.getElementById(ids[0]);
+  const c2 = document.getElementById(ids[1]);
+  const text = (c1 && c2) ? (titles[0] + '\n\n' + (c1.innerText || '') + '\n\n' + titles[1] + '\n\n' + (c2.innerText || '')) : el.innerText;
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = '已复制 ✓';
     setTimeout(() => btn.textContent = '一键复制', 2000);
