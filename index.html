@@ -1886,7 +1886,12 @@ function rpSetError(type, msg) {
 }
 
 function renderReportStructure(type, part1, part2) {
-  var compact = function(s) { return (s || '').replace(/\n{3,}/g, '\n\n').trim(); };
+  var compact = function(s) {
+    return (s || '')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/^- /gm, '• ')
+      .trim();
+  };
   var prefix = type === 'daily' ? 'Daily' : 'Weekly';
   var vals = [compact(part1), compact(part2)];
   ['1','2'].forEach(function(n, i) {
