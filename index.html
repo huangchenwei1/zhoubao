@@ -106,8 +106,8 @@
     }
     .week-strip-inner {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 4px;
+      grid-template-columns: repeat(31, 1fr);
+      gap: 2px;
     }
     .ws-item {
       text-align: center;
@@ -1243,6 +1243,7 @@
             <div class="report-type-tabs">
               <button type="button" class="report-tab active" data-type="daily" onclick="switchReportType('daily')">日报</button>
               <button type="button" class="report-tab" data-type="weekly" onclick="switchReportType('weekly')">周报</button>
+              <button type="button" class="report-tab" data-type="monthly" onclick="switchReportType('monthly')">月报</button>
             </div>
             <div class="rs-meta-wrap">
               <div class="rs-meta rs-meta-daily" id="dailyReportMeta"></div>
@@ -1250,6 +1251,11 @@
                 <button class="week-nav-btn" onclick="changeReportWeek(-1)">&#8249;</button>
                 <span id="reportWeekLabel"></span>
                 <button class="week-nav-btn" id="reportWeekNextBtn" onclick="changeReportWeek(1)">&#8250;</button>
+              </div>
+              <div class="rs-meta rs-meta-monthly" id="reportMonthMeta" style="display:none">
+                <button class="week-nav-btn" onclick="changeReportMonth(-1)">&#8249;</button>
+                <span id="reportMonthLabel"></span>
+                <button class="week-nav-btn" id="reportMonthNextBtn" onclick="changeReportMonth(1)">&#8250;</button>
               </div>
             </div>
           </div>
@@ -1296,6 +1302,27 @@
             <div id="reportFooterWeekly" class="report-footer" style="display:none">
               <span class="edit-hint">点击内容可直接编辑</span>
               <button class="copy-btn" onclick="copyReport('weekly')">一键复制</button>
+            </div>
+          </div>
+          <div id="rpMonthly" class="rp-pane" data-type="monthly">
+            <div class="rp-block">
+              <div class="rp-title">本月完成</div>
+              <div id="rpContentMonthly1" class="rp-content" contenteditable="true" spellcheck="false"></div>
+              <div id="rpPlaceholderMonthly1" class="rp-placeholder">
+                <span class="pl-num">1.</span><span class="pl-num">2.</span><span class="pl-num">3.</span><span class="pl-num" style="color:#E0D8CF">···</span>
+              </div>
+            </div>
+            <div class="rp-block">
+              <div class="rp-title">下月计划</div>
+              <div id="rpContentMonthly2" class="rp-content" contenteditable="true" spellcheck="false"></div>
+              <div id="rpPlaceholderMonthly2" class="rp-placeholder">
+                <span class="pl-num">1.</span><span class="pl-num">2.</span><span class="pl-num">3.</span><span class="pl-num" style="color:#E0D8CF">···</span>
+              </div>
+            </div>
+            <div id="reportErrorMonthly" class="error-box" style="display:none"></div>
+            <div id="reportFooterMonthly" class="report-footer" style="display:none">
+              <span class="edit-hint">点击内容可直接编辑</span>
+              <button class="copy-btn" onclick="copyReport('monthly')">一键复制</button>
             </div>
           </div>
         </div>
@@ -1377,6 +1404,7 @@ const DEFAULT_SETTINGS = {
 // ── State ──────────────────────────────────────────────────────────────────
 let currentDate         = todayStr();
 let reportWeekOffset    = 0;
+let reportMonthOffset   = 0;
 let editingTaskId       = null;
 let openProgressTaskId   = null;
 let openProgressDate    = null;
@@ -1642,6 +1670,7 @@ function renderAll() {
   renderTaskList();
   renderWeekSidebar();
   renderReportWeekLabel();
+  renderReportMonthLabel();
 }
 
 function renderTopbar() {
@@ -1783,20 +1812,29 @@ function renderDropdownPortal() {
   }
 }
 
+function getMonthDates(dateStr) {
+  const [y, m] = dateStr.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  return Array.from({ length: daysInMonth }, (_, i) => {
+    return `${y}-${pad(m)}-${pad(i + 1)}`;
+  });
+}
+
 function renderWeekSidebar() {
-  const weekDates = getWeekDates(todayStr());
-  const today     = todayStr();
-  const labels    = ['一','二','三','四','五','六','日'];
-  document.getElementById('weekSidebar').innerHTML = weekDates.map((date, i) => {
+  const monthDates = getMonthDates(currentDate);
+  const today = todayStr();
+  const dayLabels = ['日','一','二','三','四','五','六'];
+  document.getElementById('weekSidebar').innerHTML = monthDates.map((date) => {
     const count = (tasks[date] || []).length;
+    const dayOfWeek = dayLabels[parseDateStr(date).getDay()];
     let cls = 'ws-item';
     if (date === currentDate) cls += ' is-viewing';
     else if (date === today)  cls += ' is-today';
     if (count > 0) cls += ' has-tasks';
     return `<div class="${cls}" onclick="jumpToDate('${date}')">
-      <div class="ws-name">周${labels[i]}</div>
+      <div class="ws-name">${dayOfWeek}</div>
       <div class="ws-num">${+date.slice(8)}</div>
-      <div class="ws-cnt">${count > 0 ? count + '项' : '—'}</div>
+      <div class="ws-cnt">${count > 0 ? count + '' : '—'}</div>
     </div>`;
   }).join('');
 }
@@ -1843,6 +1881,28 @@ function changeReportWeek(delta) {
   renderReportWeekLabel();
 }
 
+function getReportMonthDates() {
+  const base = new Date();
+  base.setDate(1);
+  base.setMonth(base.getMonth() + reportMonthOffset);
+  const y = base.getFullYear(), m = base.getMonth() + 1;
+  const daysInMonth = new Date(y, m, 0).getDate();
+  return Array.from({ length: daysInMonth }, (_, i) => `${y}-${pad(m)}-${pad(i + 1)}`);
+}
+
+function renderReportMonthLabel() {
+  const dates = getReportMonthDates();
+  const [y, m] = dates[0].split('-').map(Number);
+  const thisYear = new Date().getFullYear();
+  document.getElementById('reportMonthLabel').textContent = y === thisYear ? `${m}月` : `${y}年${m}月`;
+  document.getElementById('reportMonthNextBtn').disabled = reportMonthOffset >= 0;
+}
+
+function changeReportMonth(delta) {
+  reportMonthOffset = Math.min(0, reportMonthOffset + delta);
+  renderReportMonthLabel();
+}
+
 function switchReportType(type) {
   reportType = type;
   document.querySelectorAll('.report-tab').forEach(function(btn) {
@@ -1850,16 +1910,19 @@ function switchReportType(type) {
   });
   document.getElementById('dailyReportMeta').style.display = type === 'daily' ? '' : 'none';
   document.getElementById('reportWeekMeta').style.display = type === 'weekly' ? 'flex' : 'none';
+  document.getElementById('reportMonthMeta').style.display = type === 'monthly' ? 'flex' : 'none';
   document.getElementById('rpDaily').classList.toggle('active', type === 'daily');
   document.getElementById('rpWeekly').classList.toggle('active', type === 'weekly');
-  document.getElementById('reportGenBtn').textContent = type === 'daily' ? '生成日报' : '生成周报';
+  document.getElementById('rpMonthly').classList.toggle('active', type === 'monthly');
+  var labels = { daily: '生成日报', weekly: '生成周报', monthly: '生成月报' };
+  document.getElementById('reportGenBtn').textContent = labels[type];
 }
 
 // ── Report Generation ──────────────────────────────────────────────────────
 var PLACEHOLDER_HTML = '<span class="pl-num">1.</span><span class="pl-num">2.</span><span class="pl-num">3.</span><span class="pl-num" style="color:#E0D8CF">···</span>';
 
 function rpSetLoading(type) {
-  var prefix = type === 'daily' ? 'Daily' : 'Weekly';
+  var prefix = type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly';
   ['1','2'].forEach(function(n) {
     var c = document.getElementById('rpContent' + prefix + n);
     var p = document.getElementById('rpPlaceholder' + prefix + n);
@@ -1876,7 +1939,7 @@ function rpSetLoading(type) {
 }
 
 function rpSetError(type, msg) {
-  var prefix = type === 'daily' ? 'Daily' : 'Weekly';
+  var prefix = type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly';
   ['1','2'].forEach(function(n) {
     var p = document.getElementById('rpPlaceholder' + prefix + n);
     if (p) { p.classList.remove('loading'); p.style.minHeight = ''; }
@@ -1892,7 +1955,7 @@ function renderReportStructure(type, part1, part2) {
       .replace(/^- /gm, '• ')
       .trim();
   };
-  var prefix = type === 'daily' ? 'Daily' : 'Weekly';
+  var prefix = type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly';
   var vals = [compact(part1), compact(part2)];
   ['1','2'].forEach(function(n, i) {
     var c = document.getElementById('rpContent' + prefix + n);
@@ -1914,7 +1977,7 @@ function renderReportStructure(type, part1, part2) {
 }
 
 async function generateReport(type) {
-  var prefix   = type === 'daily' ? 'Daily' : 'Weekly';
+  var prefix   = type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly';
   var errorEl  = document.getElementById('reportError' + prefix);
   var footerEl = document.getElementById('reportFooter' + prefix);
   var genBtn   = document.getElementById('reportGenBtn');
@@ -1924,8 +1987,8 @@ async function generateReport(type) {
   rpSetLoading(type);
   genBtn.disabled = true;
 
-  const taskData = type === 'daily' ? buildDailyData() : buildWeeklyData();
-  const prompt   = type === 'daily' ? buildDailyPrompt(taskData) : buildWeeklyPrompt(taskData);
+  const taskData = type === 'daily' ? buildDailyData() : type === 'weekly' ? buildWeeklyData() : buildMonthlyData();
+  const prompt   = type === 'daily' ? buildDailyPrompt(taskData) : type === 'weekly' ? buildWeeklyPrompt(taskData) : buildMonthlyPrompt(taskData);
 
   try {
     const text = await callLLM(prompt);
@@ -2029,6 +2092,52 @@ Format rules:
 - Do NOT output "本周完成" or "下周计划" labels.`;
 }
 
+function buildMonthlyData() {
+  const dates    = getReportMonthDates();
+  const allTasks = dates.flatMap(date => (tasks[date] || []).map(t => ({ ...t, date })));
+  const [y, m]   = dates[0].split('-').map(Number);
+  return {
+    monthStart: dates[0],
+    monthEnd:   dates[dates.length - 1],
+    year: y, month: m,
+    done:   allTasks.filter(t => getTaskProgress(t) > 0).map(t => ({ text: t.text, date: t.date, progress: getTaskProgress(t), workType: t.workType })),
+    undone: allTasks.filter(t => getTaskProgress(t) < 100).map(t => ({ text: t.text, date: t.date, progress: getTaskProgress(t), workType: t.workType })),
+  };
+}
+
+function buildMonthlyPrompt({ year, month, monthStart, monthEnd, done, undone }) {
+  const doneStr   = done.length ? done.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (current progress: ${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  const undoneStr = undone.length ? undone.map((t, i) => `${i + 1}. [${t.date}] ${t.text} (current progress: ${t.progress}%)${t.workType ? ' [' + t.workType + ']' : ''}`).join('\n') : 'None';
+  return `You are a professional workplace assistant. Generate a polished, natural-sounding monthly work report in Chinese.
+
+Month: ${year}年${month}月 (${monthStart} to ${monthEnd})
+This month's work (tasks with any progress):
+${doneStr}
+Tasks not yet 100% (to plan for next month):
+${undoneStr}
+
+Output format (Chinese only, no extra explanation):
+Output exactly TWO parts. Between the two parts, output exactly this line (nothing else on that line):
+${REPORT_SECTION_DELIM}
+
+Part 1 - This month's completed work:
+- Group by work type. Summarize and rewrite the tasks into polished, natural Chinese workplace language. Highlight overall progress and key achievements this month.
+- For partial progress (not 100%), show the exact current percentage, e.g. "(进度50%)".
+- Tasks without work type go under "其他".
+
+Part 2 - Next month's plan:
+- Group by work type. For each unfinished task, describe actions and goals for next month.
+- Show a reasonable TARGET progress for next month (e.g. current 50% → target 75%-100%). Format: "(目标XX%)".
+- Rewrite into natural, forward-looking Chinese (e.g. "计划完成..." "持续推进..." "重点跟进...").
+- Tasks without work type go under "其他".
+
+Format rules:
+- Work type group label: numbered (1. 2. 3.)
+- Items under each group: bullet points (- item) NOT numbered
+- Compact: minimal blank lines, single newline between items
+- Do NOT output "本月完成" or "下月计划" labels.`;
+}
+
 async function callLLM(prompt) {
   const { apiKey: key, apiModel: model } = settings;
   // Try Vercel API first (when deployed, OPENAI_API_KEY is in env)
@@ -2067,9 +2176,9 @@ async function callLLM(prompt) {
 
 // ── Copy ───────────────────────────────────────────────────────────────────
 function copyReport(type) {
-  const prefix = type === 'daily' ? 'Daily' : 'Weekly';
+  const prefix = type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly';
   const btn    = document.querySelector('#reportFooter' + prefix + ' .copy-btn');
-  const titles = type === 'daily' ? ['今日完成', '明日计划'] : ['本周完成', '下周计划'];
+  const titles = type === 'daily' ? ['今日完成', '明日计划'] : type === 'weekly' ? ['本周完成', '下周计划'] : ['本月完成', '下月计划'];
   const c1 = document.getElementById('rpContent' + prefix + '1');
   const c2 = document.getElementById('rpContent' + prefix + '2');
   const text = titles[0] + '\n\n' + (c1 ? c1.innerText : '') + '\n\n' + titles[1] + '\n\n' + (c2 ? c2.innerText : '');
