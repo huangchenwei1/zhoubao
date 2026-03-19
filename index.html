@@ -103,11 +103,28 @@
       margin-bottom: 24px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    .week-nav-arrow {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--ink-3);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 2px;
+      line-height: 1;
+      transition: color .15s;
+    }
+    .week-nav-arrow:hover { color: var(--ink); }
+    .week-nav-arrow:disabled { opacity: .3; cursor: not-allowed; }
     .week-strip-inner {
+      flex: 1;
       display: grid;
-      grid-template-columns: repeat(31, 1fr);
-      gap: 2px;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
     }
     .ws-item {
       text-align: center;
@@ -1190,7 +1207,9 @@
 
   <!-- 横向本周导航 -->
   <div class="week-strip-wrap page-entrance page-entrance-2">
+    <button class="week-nav-arrow" id="weekNavPrev" onclick="changeViewWeek(-1)">&#8249;</button>
     <div class="week-strip-inner" id="weekSidebar"></div>
+    <button class="week-nav-arrow" id="weekNavNext" onclick="changeViewWeek(1)" disabled>&#8250;</button>
   </div>
 
   <div class="app-body">
@@ -1403,6 +1422,7 @@ const DEFAULT_SETTINGS = {
 
 // ── State ──────────────────────────────────────────────────────────────────
 let currentDate         = todayStr();
+let viewWeekOffset      = 0;
 let reportWeekOffset    = 0;
 let reportMonthOffset   = 0;
 let editingTaskId       = null;
@@ -1812,31 +1832,35 @@ function renderDropdownPortal() {
   }
 }
 
-function getMonthDates(dateStr) {
-  const [y, m] = dateStr.split('-').map(Number);
-  const daysInMonth = new Date(y, m, 0).getDate();
-  return Array.from({ length: daysInMonth }, (_, i) => {
-    return `${y}-${pad(m)}-${pad(i + 1)}`;
-  });
+function getViewWeekDates() {
+  const base = new Date();
+  base.setDate(base.getDate() + viewWeekOffset * 7);
+  const str = `${base.getFullYear()}-${pad(base.getMonth()+1)}-${pad(base.getDate())}`;
+  return getWeekDates(str);
 }
 
 function renderWeekSidebar() {
-  const monthDates = getMonthDates(currentDate);
-  const today = todayStr();
-  const dayLabels = ['日','一','二','三','四','五','六'];
-  document.getElementById('weekSidebar').innerHTML = monthDates.map((date) => {
+  const weekDates = getViewWeekDates();
+  const today     = todayStr();
+  const labels    = ['一','二','三','四','五','六','日'];
+  document.getElementById('weekSidebar').innerHTML = weekDates.map((date, i) => {
     const count = (tasks[date] || []).length;
-    const dayOfWeek = dayLabels[parseDateStr(date).getDay()];
     let cls = 'ws-item';
     if (date === currentDate) cls += ' is-viewing';
     else if (date === today)  cls += ' is-today';
     if (count > 0) cls += ' has-tasks';
     return `<div class="${cls}" onclick="jumpToDate('${date}')">
-      <div class="ws-name">${dayOfWeek}</div>
+      <div class="ws-name">周${labels[i]}</div>
       <div class="ws-num">${+date.slice(8)}</div>
-      <div class="ws-cnt">${count > 0 ? count + '' : '—'}</div>
+      <div class="ws-cnt">${count > 0 ? count + '项' : '—'}</div>
     </div>`;
   }).join('');
+  document.getElementById('weekNavNext').disabled = viewWeekOffset >= 0;
+}
+
+function changeViewWeek(delta) {
+  viewWeekOffset = Math.min(0, viewWeekOffset + delta);
+  renderWeekSidebar();
 }
 
 function renderReportWeekLabel() {
