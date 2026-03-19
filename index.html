@@ -829,9 +829,10 @@
     .rp-pane.active { display: flex; }
     .rp-block { display: flex; flex-direction: column; gap: 6px; }
     .rp-title { font-weight: 600; font-size: 15px; color: var(--ink); }
-    .rp-placeholder { display: flex; flex-direction: column; gap: 4px; min-height: 72px; }
+    .rp-placeholder { display: flex; flex-direction: column; gap: 4px; position: relative; }
     .rp-placeholder .pl-num { font-size: 13px; color: #D4CBBf; font-weight: 500; }
-    .rp-placeholder.loading .pl-num { color: var(--ink-3); font-style: italic; font-weight: 400; }
+    .rp-placeholder.loading > * { visibility: hidden; }
+    .rp-placeholder.loading::before { content: '正在生成中…'; position: absolute; top: 0; left: 0; font-size: 13px; color: var(--ink-3); font-style: italic; }
     .rp-content { display: none; white-space: pre-wrap; font-size: 13px; line-height: 1.55; color: var(--ink); outline: none; }
     .rp-content.filled { display: block; }
     .report-footer {
@@ -1862,8 +1863,15 @@ function rpSetLoading(type) {
   ['1','2'].forEach(function(n) {
     var c = document.getElementById('rpContent' + prefix + n);
     var p = document.getElementById('rpPlaceholder' + prefix + n);
-    if (c) { c.textContent = ''; c.classList.remove('filled'); }
-    if (p) { p.classList.add('loading'); p.innerHTML = '<span class="pl-num">正在生成中…</span>'; }
+    if (c && p) {
+      if (c.classList.contains('filled')) {
+        p.style.minHeight = c.offsetHeight + 'px';
+      }
+      c.textContent = '';
+      c.classList.remove('filled');
+      p.classList.add('loading');
+      p.style.display = '';
+    }
   });
 }
 
@@ -1871,7 +1879,7 @@ function rpSetError(type, msg) {
   var prefix = type === 'daily' ? 'Daily' : 'Weekly';
   ['1','2'].forEach(function(n) {
     var p = document.getElementById('rpPlaceholder' + prefix + n);
-    if (p) { p.classList.remove('loading'); p.innerHTML = PLACEHOLDER_HTML; }
+    if (p) { p.classList.remove('loading'); p.style.minHeight = ''; }
   });
   var errEl = document.getElementById('reportError' + prefix);
   if (errEl) { errEl.textContent = '生成失败：' + msg; errEl.style.display = 'block'; }
@@ -1888,13 +1896,14 @@ function renderReportStructure(type, part1, part2) {
     if (vals[i]) {
       c.textContent = vals[i];
       c.classList.add('filled');
+      p.style.minHeight = '';
       p.style.display = 'none';
     } else {
       c.textContent = '';
       c.classList.remove('filled');
+      p.style.minHeight = '';
       p.style.display = '';
       p.classList.remove('loading');
-      p.innerHTML = PLACEHOLDER_HTML;
     }
   });
 }
