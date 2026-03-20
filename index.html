@@ -772,11 +772,11 @@
 
     .empty-tip {
       text-align: center;
-      padding: 32px 0 10px;
+      padding: 80px 24px;
       color: var(--ink-3);
-      font-size: 13px;
+      font-size: 14px;
+      line-height: 1.9;
     }
-    .empty-tip em { display: block; font-size: 26px; font-style: normal; margin-bottom: 8px; }
 
     .stats-row {
       display: flex;
@@ -884,6 +884,37 @@
     }
 
     /* ── Feedback button ── */
+    /* ── Onboarding guide ── */
+    .onboard-guide {
+      position: fixed;
+      top: 148px;
+      left: 48px;
+      z-index: 8000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .onboard-guide.visible { opacity: 1; pointer-events: auto; }
+    .onboard-guide.hiding { opacity: 0; }
+    .onboard-label {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--ink);
+      white-space: nowrap;
+      margin-bottom: 6px;
+    }
+    .onboard-arrow {
+      width: 90px;
+      height: 54px;
+      overflow: visible;
+    }
+    @keyframes onboard-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(5px); }
+    }
+    .onboard-arrow { animation: onboard-bounce 1.4s ease-in-out infinite; }
+
     .feedback-btn {
       position: fixed;
       right: 28px;
@@ -1247,7 +1278,7 @@
         </table>
       </div>
       <div class="empty-tip" id="emptyTip" style="display:none">
-        <em>📋</em>今天还没有任务，添加一个吧
+        简短描述你的工作计划，AI 会帮你管理和规划～
       </div>
     </div>
 
@@ -1351,6 +1382,15 @@
   </div>
 </div>
 
+<!-- Onboarding guide -->
+<div class="onboard-guide" id="onboardGuide">
+  <div class="onboard-label">试着添加你的第一个日程吧～</div>
+  <svg class="onboard-arrow" viewBox="0 0 90 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 4 C20 4, 80 4, 80 46" stroke="var(--ink-2)" stroke-width="1.8" stroke-dasharray="5 4" stroke-linecap="round" fill="none"/>
+    <polyline points="72,40 80,48 88,40" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </svg>
+</div>
+
 <!-- Feedback button -->
 <button class="feedback-btn page-entrance page-entrance-6" onclick="toggleQR(event)" title="问题反馈">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1375,18 +1415,40 @@
   const SPLASH_KEY = 'report_tool_splash_seen';
   const splashPage = document.getElementById('splashOverlay');
   const btn = document.getElementById('splashBtn');
+
+  function maybeShowOnboard() {
+    var guide = document.getElementById('onboardGuide');
+    if (!guide) return;
+    var allTasks = {};
+    try { allTasks = JSON.parse(localStorage.getItem('report_tool_tasks')) || {}; } catch(e) {}
+    var hasAnyTask = Object.values(allTasks).some(function(arr) { return arr && arr.length > 0; });
+    if (hasAnyTask) return;
+    setTimeout(function() { guide.classList.add('visible'); }, 600);
+  }
+
   if (localStorage.getItem(SPLASH_KEY)) {
     splashPage.style.display = 'none';
     document.body.classList.add('page-ready');
+    maybeShowOnboard();
   } else {
     btn.onclick = function() {
       localStorage.setItem(SPLASH_KEY, '1');
       document.body.classList.add('page-ready');
       splashPage.classList.add('is-hidden');
-      setTimeout(function() { splashPage.style.display = 'none'; }, 350);
+      setTimeout(function() {
+        splashPage.style.display = 'none';
+        maybeShowOnboard();
+      }, 350);
     };
   }
 })();
+
+function dismissOnboard() {
+  var guide = document.getElementById('onboardGuide');
+  if (!guide || !guide.classList.contains('visible')) return;
+  guide.classList.add('hiding');
+  setTimeout(function() { guide.style.display = 'none'; }, 400);
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const STORAGE_KEY    = 'report_tool_tasks';
@@ -1529,6 +1591,7 @@ function addTask() {
   tasks[currentDate].push({ id: Date.now(), text, done: false, progress: null, workType: null, createdAt: new Date().toISOString() });
   saveTasks();
   input.value = '';
+  dismissOnboard();
   renderAll();
 }
 
