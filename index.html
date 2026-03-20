@@ -885,6 +885,17 @@
 
     /* ── Feedback button ── */
     /* ── Onboarding guide ── */
+    .onboard-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(28, 23, 20, 0.45);
+      z-index: 7900;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .onboard-overlay.visible { opacity: 1; pointer-events: auto; }
+    .onboard-overlay.hiding { opacity: 0; pointer-events: none; }
     .onboard-guide {
       position: fixed;
       top: 148px;
@@ -900,9 +911,10 @@
       font-family: 'Noto Serif SC', serif;
       font-size: 17px;
       font-weight: 600;
-      color: var(--ink);
+      color: #fff;
       white-space: nowrap;
       margin-bottom: 6px;
+      text-shadow: 0 1px 6px rgba(0,0,0,.2);
     }
     .onboard-arrow {
       width: 90px;
@@ -914,6 +926,13 @@
       50% { transform: translateY(5px); }
     }
     .onboard-arrow { animation: onboard-bounce 1.4s ease-in-out infinite; }
+    /* Spotlight: lift the add-row above the overlay */
+    body.onboarding .add-row {
+      position: relative;
+      z-index: 8100;
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.25), 0 8px 40px rgba(0,0,0,0.25);
+      border-radius: 10px;
+    }
 
     .feedback-btn {
       position: fixed;
@@ -1406,12 +1425,15 @@
   </div>
 </div>
 
+<!-- Onboarding overlay -->
+<div class="onboard-overlay" id="onboardOverlay" onclick="dismissOnboard()"></div>
+
 <!-- Onboarding guide -->
 <div class="onboard-guide" id="onboardGuide">
   <div class="onboard-label">试着添加你的第一个日程吧～</div>
   <svg class="onboard-arrow" viewBox="0 0 90 54" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 4 C20 4, 80 4, 80 46" stroke="var(--ink-2)" stroke-width="1.8" stroke-dasharray="5 4" stroke-linecap="round" fill="none"/>
-    <polyline points="72,40 80,48 88,40" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M4 4 C20 4, 80 4, 80 46" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-dasharray="5 4" stroke-linecap="round" fill="none"/>
+    <polyline points="72,40 80,48 88,40" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   </svg>
 </div>
 
@@ -1441,13 +1463,18 @@
   const btn = document.getElementById('splashBtn');
 
   function maybeShowOnboard() {
-    var guide = document.getElementById('onboardGuide');
+    var guide   = document.getElementById('onboardGuide');
+    var overlay = document.getElementById('onboardOverlay');
     if (!guide) return;
     var allTasks = {};
     try { allTasks = JSON.parse(localStorage.getItem('report_tool_tasks')) || {}; } catch(e) {}
     var hasAnyTask = Object.values(allTasks).some(function(arr) { return arr && arr.length > 0; });
     if (hasAnyTask) return;
-    setTimeout(function() { guide.classList.add('visible'); }, 600);
+    setTimeout(function() {
+      guide.classList.add('visible');
+      if (overlay) overlay.classList.add('visible');
+      document.body.classList.add('onboarding');
+    }, 600);
   }
 
   if (localStorage.getItem(SPLASH_KEY)) {
@@ -1468,10 +1495,16 @@
 })();
 
 function dismissOnboard() {
-  var guide = document.getElementById('onboardGuide');
+  var guide   = document.getElementById('onboardGuide');
+  var overlay = document.getElementById('onboardOverlay');
   if (!guide || !guide.classList.contains('visible')) return;
   guide.classList.add('hiding');
-  setTimeout(function() { guide.style.display = 'none'; }, 400);
+  if (overlay) overlay.classList.add('hiding');
+  document.body.classList.remove('onboarding');
+  setTimeout(function() {
+    guide.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+  }, 400);
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
