@@ -1004,6 +1004,26 @@
     }
 
     /* ── Splash page (first visit only) ── */
+    .splash-brand {
+      position: absolute;
+      top: 28px;
+      left: 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .splash-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+    .splash-brand-name {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -.3px;
+    }
     @keyframes splash-fade-up {
       from {
         opacity: 0;
@@ -1201,6 +1221,10 @@
 
 <!-- Splash page (first visit only) -->
 <div class="splash-page" id="splashOverlay">
+  <div class="splash-brand">
+    <img src="./favicon.png" class="splash-logo" alt="logo" />
+    <span class="splash-brand-name">AI 周报</span>
+  </div>
   <div class="splash-content">
     <div class="splash-title">🤔 还在为写周报头疼吗?</div>
     <div class="splash-subtitle">正确的工作方式会使你更游刃有余，管理就从日常开始~</div>
