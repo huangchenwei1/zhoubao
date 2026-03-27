@@ -490,6 +490,22 @@
     }
     .task-table tbody tr:hover .del-btn { opacity: 1; }
     .del-btn:hover { color: var(--accent); background: var(--accent-bg); }
+    .more-btn {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--ink-3);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      letter-spacing: 1px;
+      transition: all .15s;
+    }
+    .task-table tbody tr:hover .more-btn { opacity: 1; }
+    .more-btn:hover { color: var(--ink); background: var(--border); }
 
     /* task progress - pill button + dropdown */
     .task-progress-wrap {
@@ -650,7 +666,8 @@
     #dropdownPortal { position: fixed; z-index: 9999; top: 0; left: 0; pointer-events: none; }
     #dropdownPortal > * { pointer-events: auto; }
     .task-progress-dropdown-portal,
-    .task-worktype-dropdown-portal {
+    .task-worktype-dropdown-portal,
+    .task-more-dropdown-portal {
       position: fixed;
       display: flex;
       flex-direction: column;
@@ -658,6 +675,35 @@
       transform-origin: top center;
       animation: dropdownExpand 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
     }
+    .task-more-dropdown-portal {
+      padding: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      min-width: 128px;
+      width: max-content;
+      gap: 2px;
+    }
+    .more-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 7px;
+      font-size: 13px;
+      font-family: 'Noto Sans SC', sans-serif;
+      cursor: pointer;
+      background: transparent;
+      color: var(--ink-2);
+      text-align: left;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .more-dropdown-item:hover { background: var(--bg); }
+    .more-dropdown-item.danger { color: var(--accent); }
+    .more-dropdown-item.danger:hover { background: var(--accent-bg); }
     .task-progress-dropdown-portal {
       padding: 10px;
       background: var(--surface);
@@ -1185,6 +1231,84 @@
       .splash-title { font-size: 20px; }
       .splash-subtitle { font-size: 14px; }
     }
+
+    /* ── Sub-tasks ── */
+    .col-num-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+    .col-num-label { font-size: 11px; color: var(--ink-3); }
+    .expand-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--ink-3);
+      flex-shrink: 0;
+      transition: border-color .15s, color .15s;
+    }
+    .expand-toggle svg { transition: transform .2s; }
+    .expand-toggle.is-expanded svg { transform: rotate(90deg); }
+    .expand-toggle:hover { border-color: var(--ink-3); color: var(--ink); }
+
+
+    .subtask-row td,
+    .subtask-add-row td {
+      border-top: 1px solid transparent !important;
+    }
+    .subtask-row .task-progress-wrap { opacity: 0; pointer-events: none; }
+    .subtask-row:hover .task-progress-wrap,
+    .subtask-row.subtask-progress-selected .task-progress-wrap { opacity: 1; pointer-events: auto; }
+    .subtask-indent-col {
+      width: 44px;
+      text-align: center;
+    }
+    .subtask-main-col {
+      padding-left: 14px;
+    }
+    .subtask-cell {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding-left: 20px;
+    }
+    .subtask-text {
+      flex: 1;
+      font-size: 13px;
+      color: var(--ink-2);
+      cursor: text;
+      line-height: 1.45;
+    }
+    .subtask-text.done { text-decoration: line-through; color: var(--done); }
+    .subtask-edit-input {
+      flex: 1;
+      border: none;
+      border-bottom: 1.5px solid var(--accent);
+      background: transparent;
+      font-size: 13px;
+      font-family: 'Noto Sans SC', sans-serif;
+      color: var(--ink);
+      outline: none;
+      padding: 1px 0 3px;
+    }
+    .subtask-row:hover .del-btn { opacity: 1; }
+    .carried-badge {
+      flex-shrink: 0;
+      font-size: 10px;
+      color: var(--ink-3);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -1458,10 +1582,53 @@ let openWorkTypeTaskId  = null;
 let openWorkTypeDate    = null;
 let addingWorkType      = false;
 let reportType          = 'daily';
+let expandedTasks       = {};
+let editingSubTaskId    = null;
+let openMoreTaskId         = null;
+let openMoreDate           = null;
+let openSubProgressTaskId  = null;
+let openSubProgressSubId   = null;
+let openSubProgressDate    = null;
 let tasks            = loadTasks();
 let settings         = loadSettings();
 let workTypes        = loadWorkTypes();
 loadApiConfig();  // Load API key from 大模型api.md (provided by product owner)
+carryOverTasks();
+
+// ── Carry-over: move incomplete past tasks to today ────────────────────────
+function carryOverTasks() {
+  var today = todayStr();
+  var pastDates = Object.keys(tasks).filter(function(d) { return d < today; });
+  if (!pastDates.length) return;
+  var changed = false;
+  var idCounter = 0;
+  pastDates.forEach(function(date) {
+    (tasks[date] || []).forEach(function(t) {
+      if (t.carriedTo) return;
+      if (t.done || getTaskProgress(t) >= 100) return;
+      t.carriedTo = today;
+      if (!tasks[today]) tasks[today] = [];
+      var alreadyExists = tasks[today].some(function(ct) {
+        return ct.originalId === (t.originalId || t.id);
+      });
+      if (!alreadyExists) {
+        tasks[today].push({
+          id: Date.now() + (++idCounter),
+          text: t.text,
+          done: false,
+          progress: t.progress,
+          workType: t.workType,
+          children: JSON.parse(JSON.stringify(t.children || [])),
+          carriedFrom: date,
+          originalId: t.originalId || t.id,
+          createdAt: new Date().toISOString(),
+        });
+        changed = true;
+      }
+    });
+  });
+  if (changed) saveTasks();
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function todayStr() {
@@ -1553,7 +1720,7 @@ function addTask() {
   const text  = input.value.trim();
   if (!text) return;
   if (!tasks[currentDate]) tasks[currentDate] = [];
-  tasks[currentDate].push({ id: Date.now(), text, done: false, progress: null, workType: null, createdAt: new Date().toISOString() });
+  tasks[currentDate].push({ id: Date.now(), text, done: false, progress: null, workType: null, children: [], createdAt: new Date().toISOString() });
   saveTasks();
   input.value = '';
   dismissOnboard();
@@ -1684,6 +1851,155 @@ function getTaskProgress(t) {
   return t.progress ?? (t.done ? 100 : 0);
 }
 
+function toggleMoreDropdown(date, id, e) {
+  e.stopPropagation();
+  if (openMoreTaskId === id && openMoreDate === date) {
+    openMoreTaskId = null;
+    openMoreDate = null;
+  } else {
+    openMoreTaskId = id;
+    openMoreDate = date;
+    openProgressTaskId = null;
+    openProgressDate = null;
+    openWorkTypeTaskId = null;
+    openWorkTypeDate = null;
+  }
+  renderTaskList();
+}
+
+function closeMoreDropdown() {
+  openMoreTaskId = null;
+  openMoreDate = null;
+  renderTaskList();
+}
+
+function toggleExpand(taskId) {
+  expandedTasks[taskId] = !expandedTasks[taskId];
+  renderTaskList();
+}
+
+function addSubTask(date, taskId) {
+  const t = (tasks[date] || []).find(t => t.id === taskId);
+  if (!t) return;
+  if (!t.children) t.children = [];
+  const subId = Date.now();
+  t.children.push({ id: subId, text: '', done: false, progress: null });
+  expandedTasks[taskId] = true;
+  saveTasks();
+  editingSubTaskId = { taskId, subId };
+  renderTaskList();
+  setTimeout(function() {
+    var inp = document.querySelector('.subtask-edit-input');
+    if (inp) inp.focus();
+  }, 30);
+}
+
+function toggleSubTask(date, taskId, subId) {
+  const t = (tasks[date] || []).find(t => t.id === taskId);
+  if (!t || !t.children) return;
+  const sub = t.children.find(s => s.id === subId);
+  if (sub) {
+    sub.done = !sub.done;
+    sub.progress = sub.done ? 100 : (sub.progress !== null && sub.progress !== undefined ? sub.progress : 25);
+    saveTasks();
+    renderTaskList();
+  }
+}
+
+function getSubTaskProgress(sub) {
+  return sub.progress ?? (sub.done ? 100 : 0);
+}
+
+function setSubTaskProgress(date, taskId, subId, val) {
+  const t = (tasks[date] || []).find(t => t.id === taskId);
+  if (!t || !t.children) return;
+  const sub = t.children.find(s => s.id === subId);
+  if (!sub) return;
+  sub.progress = parseInt(val, 10);
+  sub.done = sub.progress === 100;
+  openSubProgressTaskId = null;
+  openSubProgressSubId = null;
+  openSubProgressDate = null;
+  saveTasks();
+  renderAll();
+}
+
+function toggleSubProgressDropdown(date, taskId, subId, e) {
+  e.stopPropagation();
+  if (openSubProgressTaskId === taskId && openSubProgressSubId === subId && openSubProgressDate === date) {
+    openSubProgressTaskId = null;
+    openSubProgressSubId = null;
+    openSubProgressDate = null;
+  } else {
+    openSubProgressTaskId = taskId;
+    openSubProgressSubId = subId;
+    openSubProgressDate = date;
+    openProgressTaskId = null;
+    openProgressDate = null;
+    openWorkTypeTaskId = null;
+    openWorkTypeDate = null;
+    openMoreTaskId = null;
+    openMoreDate = null;
+  }
+  renderTaskList();
+}
+
+function closeSubProgressDropdown() {
+  openSubProgressTaskId = null;
+  openSubProgressSubId = null;
+  openSubProgressDate = null;
+  renderTaskList();
+}
+
+function deleteSubTask(date, taskId, subId) {
+  const t = (tasks[date] || []).find(t => t.id === taskId);
+  if (!t || !t.children) return;
+  t.children = t.children.filter(s => s.id !== subId);
+  if (t.children.length === 0) expandedTasks[taskId] = false;
+  saveTasks();
+  renderAll();
+}
+
+function startSubTaskEdit(taskId, subId) {
+  editingSubTaskId = { taskId, subId };
+  renderTaskList();
+  setTimeout(function() {
+    var inp = document.querySelector('.subtask-edit-input');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 30);
+}
+
+function saveSubTaskEdit(date, taskId, subId, newText) {
+  const text = (newText || '').trim();
+  editingSubTaskId = null;
+  const t = (tasks[date] || []).find(t => t.id === taskId);
+  if (t && t.children) {
+    if (!text) {
+      t.children = t.children.filter(s => s.id !== subId);
+      if (t.children.length === 0) expandedTasks[taskId] = false;
+    } else {
+      const sub = t.children.find(s => s.id === subId);
+      if (sub) sub.text = text;
+    }
+    saveTasks();
+  }
+  renderAll();
+}
+
+function cancelSubTaskEdit(date, taskId, subId) {
+  const t = (tasks[date] || []).find(t => t.id === taskId);
+  if (t && t.children) {
+    const sub = t.children.find(s => s.id === subId);
+    if (sub && !sub.text) {
+      t.children = t.children.filter(s => s.id !== subId);
+      if (t.children.length === 0) expandedTasks[taskId] = false;
+      saveTasks();
+    }
+  }
+  editingSubTaskId = null;
+  renderTaskList();
+}
+
 function deleteTask(date, id) {
   if (!tasks[date]) return;
   tasks[date] = tasks[date].filter(t => t.id !== id);
@@ -1755,10 +2071,16 @@ function renderTaskList() {
 
   window._portalProgressData = null;
   window._portalWorkTypeData = null;
-  list.innerHTML = dayTasks.map((t, idx) => {
+  window._portalMoreData = null;
+  window._portalSubProgressData = null;
+  const allRows = [];
+  dayTasks.forEach(function(t, idx) {
     const isEditing = t.id === editingTaskId;
     const hasSelected = t.progress != null && (PROGRESS_OPTS.includes(t.progress) || t.progress === 100);
-    const rowCls = (hasSelected ? ' task-progress-selected' : '') + (t.workType ? ' task-worktype-selected' : '');
+    const children = t.children || [];
+    const hasChildren = children.length > 0;
+    const isExpanded = !!expandedTasks[t.id];
+    const rowCls = (isExpanded ? ' task-row-expanded' : '') + (hasSelected ? ' task-progress-selected' : '') + (t.workType ? ' task-worktype-selected' : '');
     const displayProg = t.done ? 100 : (getTaskProgress(t) <= 25 ? 25 : getTaskProgress(t) <= 50 ? 50 : 75);
     const btnContent = t.done
       ? '<span class="progress-pill-fill" style="width:100%"></span><span class="progress-pill-text">已完成</span>'
@@ -1782,16 +2104,25 @@ function renderTaskList() {
       return '<button type="button" class="task-worktype-opt" style="background:' + c.bg + ';color:' + c.fg + '" onclick="setTaskWorkType(\'' + currentDate + '\',' + t.id + ',\'' + wEsc + '\')"><span>' + escHtml(w) + '</span><span class="wt-del" onclick="event.stopPropagation();removeWorkType(\'' + wEsc + '\')" title="删除类型">×</span></button>';
     }).join('') + (addingWorkType && isWtOpen ? '<input type="text" class="task-worktype-add-input" placeholder="输入类型名称" onblur="handleAddWorkTypeBlur(this)" onkeydown="if(event.key===\'Enter\'){confirmAddWorkType(this.value);event.preventDefault()}if(event.key===\'Escape\'){cancelAddWorkType();event.preventDefault()}">' : '<button type="button" class="task-worktype-opt task-worktype-add" onclick="addWorkType(event,\'' + currentDate + '\',' + t.id + ')">+ 添加类型</button>');
     if (isWtOpen) window._portalWorkTypeData = { html: wtOptsHtml, triggerId: currentDate + '-' + t.id };
+    const isMoreOpen = openMoreTaskId === t.id && openMoreDate === currentDate;
+    const moreOptsHtml = `<button type="button" class="more-dropdown-item" onclick="closeMoreDropdown();addSubTask('${currentDate}',${t.id})"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>添加子任务</button><button type="button" class="more-dropdown-item danger" onclick="closeMoreDropdown();deleteTask('${currentDate}',${t.id})"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 3.5 13 3.5"/><path d="M2.5 3.5V12a1 1 0 001 1h7a1 1 0 001-1V3.5"/><path d="M4.5 3.5V2a1 1 0 011-1h3a1 1 0 011 1v1.5"/></svg>删除</button>`;
+    if (isMoreOpen) window._portalMoreData = { html: moreOptsHtml, triggerId: currentDate + '-' + t.id };
+    const carriedBadge = t.carriedFrom
+      ? `<span class="carried-badge">来自${formatDateShort(t.carriedFrom)}</span>`
+      : '';
     const textPart = isEditing
       ? `<input class="task-edit-input" value="${escHtml(t.text)}"
                onblur="saveTaskEdit('${currentDate}', ${t.id}, this.value)"
                onkeydown="if(event.key==='Enter'){this.blur()} if(event.key==='Escape'){cancelTaskEdit()}"
          />`
       : `<span class="task-text ${t.done ? 'done' : ''}"
-               onclick="startTaskEdit(${t.id})">${escHtml(t.text)}</span>`;
-    return `
+               onclick="startTaskEdit(${t.id})">${escHtml(t.text)}</span>${carriedBadge}`;
+    const colNumContent = hasChildren
+      ? `<div class="col-num-inner"><button class="expand-toggle${isExpanded ? ' is-expanded' : ''}" onclick="toggleExpand(${t.id})" title="${isExpanded ? '收起子任务' : '展开子任务'}"><svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 1l4 3-4 3V1z"/></svg></button><span class="col-num-label">${idx + 1}</span></div>`
+      : `${idx + 1}`;
+    allRows.push(`
     <tr class="${rowCls}">
-      <td class="col-num">${idx + 1}</td>
+      <td class="col-num">${colNumContent}</td>
       <td class="col-task">
         <div class="task-cell-inner">
           <label class="task-check">
@@ -1805,7 +2136,7 @@ function renderTaskList() {
             </div>
           </label>
           ${textPart}
-          <button class="del-btn" onclick="deleteTask('${currentDate}', ${t.id})" title="删除">×</button>
+          <button class="more-btn" data-more-trigger="${currentDate}-${t.id}" onclick="toggleMoreDropdown('${currentDate}',${t.id},event)" title="更多">···</button>
         </div>
       </td>
       <td class="col-progress">
@@ -1820,11 +2151,70 @@ function renderTaskList() {
           <div class="task-worktype-dropdown">${wtOptsHtml}</div>
         </div>
       </td>
-    </tr>`;
-  }).join('');
+    </tr>`);
+
+    if (isExpanded) {
+      children.forEach(function(sub) {
+        const isEditingSub = editingSubTaskId && editingSubTaskId.taskId === t.id && editingSubTaskId.subId === sub.id;
+        const subTextPart = isEditingSub
+          ? `<input class="subtask-edit-input" value="${escHtml(sub.text)}" placeholder="输入子任务内容"
+                   onblur="saveSubTaskEdit('${currentDate}', ${t.id}, ${sub.id}, this.value)"
+                   onkeydown="if(event.key==='Enter'){this.blur()} if(event.key==='Escape'){cancelSubTaskEdit('${currentDate}',${t.id},${sub.id})}"
+             />`
+          : `<span class="subtask-text${sub.done ? ' done' : ''}" onclick="startSubTaskEdit(${t.id}, ${sub.id})">${escHtml(sub.text)}</span>`;
+        const subProg = getSubTaskProgress(sub);
+        const subHasSelected = sub.progress != null && (PROGRESS_OPTS.includes(sub.progress) || sub.progress === 100);
+        const subProgDisabled = sub.done;
+        const subIsProgOpen = !subProgDisabled && openSubProgressTaskId === t.id && openSubProgressSubId === sub.id && openSubProgressDate === currentDate;
+        const subDisplayProg = sub.done ? 100 : (subProg <= 25 ? 25 : subProg <= 50 ? 50 : 75);
+        const subBtnContent = sub.done
+          ? '<span class="progress-pill-fill" style="width:100%"></span><span class="progress-pill-text">已完成</span>'
+          : (subHasSelected
+            ? '<span class="progress-pill-fill" style="width:' + subDisplayProg + '%"></span><span class="progress-pill-text">' + subDisplayProg + '%</span>'
+            : '进度');
+        const subBtnCls = (subHasSelected || sub.done) ? 'task-progress-btn progress-pill' : 'task-progress-btn empty';
+        const subProgWrapCls = 'task-progress-wrap' + (subIsProgOpen ? ' is-open' : '');
+        const subProgOptsHtml = PROGRESS_OPTS.map(function(p) {
+          return '<button type="button" class="task-progress-opt" onclick="setSubTaskProgress(\'' + currentDate + '\',' + t.id + ',' + sub.id + ',' + p + ')"><span class="progress-pill-fill" style="width:' + p + '%"></span><span class="progress-pill-text">' + p + '%</span></button>';
+        }).join('');
+        if (subIsProgOpen) window._portalSubProgressData = { html: subProgOptsHtml, triggerId: 'sub-' + t.id + '-' + sub.id };
+        const subRowCls = 'subtask-row' + (subHasSelected ? ' subtask-progress-selected' : '');
+        allRows.push(`
+        <tr class="${subRowCls}">
+          <td class="col-num subtask-indent-col"></td>
+          <td class="col-task subtask-main-col">
+            <div class="subtask-cell">
+              <label class="task-check">
+                <input type="checkbox" ${sub.done ? 'checked' : ''} onchange="toggleSubTask('${currentDate}', ${t.id}, ${sub.id})" />
+                <div class="check-box">
+                  <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+                    <path d="M1 3.5L4 6.5L10 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </label>
+              ${subTextPart}
+              <button class="del-btn" onclick="deleteSubTask('${currentDate}', ${t.id}, ${sub.id})" title="删除子任务">×</button>
+            </div>
+          </td>
+          <td class="col-progress">
+            <div class="${subProgWrapCls}">
+              <button type="button" class="${subBtnCls}${subProgDisabled ? ' progress-done' : ''}" data-subprog-trigger="sub-${t.id}-${sub.id}" ${subProgDisabled ? '' : 'onclick="toggleSubProgressDropdown(\'' + currentDate + '\',' + t.id + ',' + sub.id + ',event)"'}>${subBtnContent}</button>
+              <div class="task-progress-dropdown">${subProgOptsHtml}</div>
+            </div>
+          </td>
+          <td class="col-worktype"></td>
+        </tr>`);
+      });
+    }
+  });
+  list.innerHTML = allRows.join('');
 
   if (editingTaskId !== null) {
     const inp = document.querySelector('.task-edit-input');
+    if (inp) { inp.focus(); inp.select(); }
+  }
+  if (editingSubTaskId !== null) {
+    const inp = document.querySelector('.subtask-edit-input');
     if (inp) { inp.focus(); inp.select(); }
   }
   setTimeout(renderDropdownPortal, 0);
@@ -1835,26 +2225,76 @@ function renderDropdownPortal() {
   portal.innerHTML = '';
   var pd = window._portalProgressData;
   var wd = window._portalWorkTypeData;
+  var md = window._portalMoreData;
+  if (md) {
+    var mBtn = document.querySelector('[data-more-trigger="' + md.triggerId + '"]');
+    if (mBtn) {
+      var mr = mBtn.getBoundingClientRect();
+      var mel = document.createElement('div');
+      mel.className = 'task-more-dropdown-portal';
+      mel.style.cssText = 'left:' + mr.left + 'px;top:' + (mr.bottom + 4) + 'px;visibility:hidden;';
+      mel.innerHTML = md.html;
+      portal.appendChild(mel);
+      var melH = mel.offsetHeight;
+      if (mr.bottom + 4 + melH > window.innerHeight) {
+        mel.style.top = Math.max(4, mr.top - melH - 4) + 'px';
+        mel.style.transformOrigin = 'bottom center';
+      }
+      mel.style.visibility = '';
+    }
+  }
+  window._portalMoreData = null;
+  var spd = window._portalSubProgressData;
+  if (spd) {
+    var spBtn = document.querySelector('[data-subprog-trigger="' + spd.triggerId + '"]');
+    if (spBtn) {
+      var spr = spBtn.getBoundingClientRect();
+      var spEl = document.createElement('div');
+      spEl.className = 'task-progress-dropdown task-progress-dropdown-portal';
+      spEl.style.cssText = 'left:' + spr.left + 'px;top:' + (spr.bottom + 4) + 'px;visibility:hidden;';
+      spEl.innerHTML = spd.html;
+      portal.appendChild(spEl);
+      var spElH = spEl.offsetHeight;
+      if (spr.bottom + 4 + spElH > window.innerHeight) {
+        spEl.style.top = Math.max(4, spr.top - spElH - 4) + 'px';
+        spEl.style.transformOrigin = 'bottom center';
+      }
+      spEl.style.visibility = '';
+    }
+  }
+  window._portalSubProgressData = null;
   if (pd) {
     var btn = document.querySelector('[data-progress-trigger="' + pd.triggerId + '"]');
     if (btn) {
       var r = btn.getBoundingClientRect();
       var el = document.createElement('div');
       el.className = 'task-progress-dropdown task-progress-dropdown-portal';
-      el.style.cssText = 'left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;';
+      el.style.cssText = 'left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;visibility:hidden;';
       el.innerHTML = pd.html;
       portal.appendChild(el);
+      var elH = el.offsetHeight;
+      if (r.bottom + 4 + elH > window.innerHeight) {
+        el.style.top = Math.max(4, r.top - elH - 4) + 'px';
+        el.style.transformOrigin = 'bottom center';
+      }
+      el.style.visibility = '';
     }
   }
   if (wd) {
-    var btn = document.querySelector('[data-worktype-trigger="' + wd.triggerId + '"]');
-    if (btn) {
-      var r = btn.getBoundingClientRect();
-      var el = document.createElement('div');
-      el.className = 'task-worktype-dropdown task-worktype-dropdown-portal';
-      el.style.cssText = 'left:' + r.left + 'px;top:' + (r.bottom + 4) + 'px;';
-      el.innerHTML = wd.html;
-      portal.appendChild(el);
+    var btn2 = document.querySelector('[data-worktype-trigger="' + wd.triggerId + '"]');
+    if (btn2) {
+      var r2 = btn2.getBoundingClientRect();
+      var el2 = document.createElement('div');
+      el2.className = 'task-worktype-dropdown task-worktype-dropdown-portal';
+      el2.style.cssText = 'left:' + r2.left + 'px;top:' + (r2.bottom + 4) + 'px;visibility:hidden;';
+      el2.innerHTML = wd.html;
+      portal.appendChild(el2);
+      var el2H = el2.offsetHeight;
+      if (r2.bottom + 4 + el2H > window.innerHeight) {
+        el2.style.top = Math.max(4, r2.top - el2H - 4) + 'px';
+        el2.style.transformOrigin = 'bottom center';
+      }
+      el2.style.visibility = '';
     }
   }
 }
@@ -2291,6 +2731,8 @@ function closeQR() {
 document.addEventListener('click', function(e) {
   if (openProgressTaskId !== null && !e.target.closest('.task-progress-wrap') && !e.target.closest('#dropdownPortal .task-progress-dropdown-portal')) closeProgressDropdown();
   if (openWorkTypeTaskId !== null && !e.target.closest('.task-worktype-wrap') && !e.target.closest('#dropdownPortal .task-worktype-dropdown-portal')) closeWorkTypeDropdown();
+  if (openMoreTaskId !== null && !e.target.closest('[data-more-trigger]') && !e.target.closest('#dropdownPortal .task-more-dropdown-portal')) closeMoreDropdown();
+  if (openSubProgressTaskId !== null && !e.target.closest('[data-subprog-trigger]') && !e.target.closest('#dropdownPortal .task-progress-dropdown-portal')) closeSubProgressDropdown();
 });
 
 // ── Init ───────────────────────────────────────────────────────────────────
